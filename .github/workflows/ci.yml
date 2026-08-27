@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  java:
+    uses: portable-agent/.github/.github/workflows/reusable-java.yml@main
+    with:
+      java-version: "25"
+  container:
+    needs: java
+    uses: portable-agent/.github/.github/workflows/reusable-container.yml@main
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    with:
+      image-name: action-service
