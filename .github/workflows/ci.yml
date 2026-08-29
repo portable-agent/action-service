@@ -13,8 +13,10 @@ jobs:
     uses: portable-agent/.github/.github/workflows/reusable-java.yml@main
     with:
       java-version: "25"
+  docs:
+    uses: portable-agent/.github/.github/workflows/reusable-docs.yml@main
   container:
-    needs: java
+    needs: [java, docs]
     uses: portable-agent/.github/.github/workflows/reusable-container.yml@main
     permissions:
       contents: read
