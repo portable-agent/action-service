@@ -1,13 +1,13 @@
 # Action Service
 
-Транзакционное ядро действий Portable Agent. Сервис принимает предложение действия, вычисляет
-неизменяемый hash payload, сохраняет action и outbox в одной транзакции и запускает durable workflow
-в Temporal. Подтверждение действительно только для того payload, который увидел пользователь.
+Сервис хранит действия Portable Agent и готовит их к безопасному выполнению. Сейчас это каркас:
+он принимает действие, сохраняет его вместе с записью outbox и передаёт идентификатор в Temporal.
+Реальные интеграции и правила выполнения появятся после общего проектирования бизнеса.
 
 ## Стек
 
-Java 25, Spring Boot 4.1, PostgreSQL, Flyway, Temporal Java SDK, OAuth2 Resource Server,
-OpenTelemetry-ready Actuator/Micrometer, Testcontainers.
+Java 25, Spring Boot 4.1, Spring MVC, jOOQ, PostgreSQL, Flyway, Temporal Java SDK,
+OAuth2 Resource Server, Micrometer и Testcontainers. JPA и Hibernate не используются.
 
 ## Запуск
 
@@ -19,8 +19,18 @@ docker compose up -d
 По умолчанию API ожидает JWT от Keycloak. Для локальной разработки issuer задаётся переменной
 `OIDC_ISSUER_URI`. Контракт API находится в репозитории `portable-agent/contracts`.
 
-## Архитектурная гарантия
+## Проверки
 
-HTTP-слой не работает с JPA напрямую. Бизнес-переходы принадлежат aggregate `ActionProposal`,
-транзакции — application service, доставка в Temporal — outbox dispatcher. Повторная доставка
-безопасна благодаря стабильному workflow id `action-{uuid}`.
+```bash
+./gradlew spotlessCheck test
+```
+
+Код jOOQ создаётся автоматически из `src/main/resources/db/migration/*.sql`. Сгенерированный код
+находится в `build/` и не хранится в Git.
+
+## Где читать дальше
+
+- `AGENTS.md` — короткая памятка о границах сервиса и командах.
+- `docs/architecture.md` — структура кода и зависимости слоёв.
+- `docs/development.md` — локальная разработка и TDD.
+- `docs/runbook.md` — запуск и диагностика.

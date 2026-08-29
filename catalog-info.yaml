@@ -4,6 +4,7 @@ metadata:
   name: action-service
   description: Durable lifecycle и подтверждение действий агента
   annotations:
+    backstage.io/techdocs-ref: dir:.
     github.com/project-slug: portable-agent/action-service
 spec:
   type: service

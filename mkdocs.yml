@@ -1,0 +1,13 @@
+site_name: Action Service
+site_description: Русская документация сервиса действий Portable Agent
+docs_dir: docs
+theme:
+  name: material
+nav:
+  - Главная: index.md
+  - Архитектура: architecture.md
+  - API: api.md
+  - Разработка: development.md
+  - Эксплуатация: runbook.md
+  - Решения:
+      - jOOQ вместо JPA: decisions/0001-jooq.md

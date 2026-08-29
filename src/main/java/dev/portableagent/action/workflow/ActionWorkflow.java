@@ -7,9 +7,9 @@ import java.util.UUID;
 
 @WorkflowInterface
 public interface ActionWorkflow {
-    @WorkflowMethod
-    void run(UUID actionId);
+  @WorkflowMethod
+  void run(UUID actionId);
 
-    @SignalMethod
-    void decision(String decision, String payloadHash);
+  @SignalMethod
+  void decision(String decision, String payloadHash);
 }

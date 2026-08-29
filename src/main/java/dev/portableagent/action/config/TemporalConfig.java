@@ -11,17 +11,15 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @EnableConfigurationProperties(TemporalProperties.class)
 public class TemporalConfig {
-    @Bean(destroyMethod = "shutdown")
-    WorkflowServiceStubs workflowServiceStubs(TemporalProperties properties) {
-        return WorkflowServiceStubs.newServiceStubs(WorkflowServiceStubsOptions.newBuilder()
-                .setTarget(properties.target())
-                .build());
-    }
+  @Bean(destroyMethod = "shutdown")
+  WorkflowServiceStubs workflowServiceStubs(TemporalProperties properties) {
+    return WorkflowServiceStubs.newServiceStubs(
+        WorkflowServiceStubsOptions.newBuilder().setTarget(properties.target()).build());
+  }
 
-    @Bean
-    WorkflowClient workflowClient(WorkflowServiceStubs service, TemporalProperties properties) {
-        return WorkflowClient.newInstance(service, WorkflowClientOptions.newBuilder()
-                .setNamespace(properties.namespace())
-                .build());
-    }
+  @Bean
+  WorkflowClient workflowClient(WorkflowServiceStubs service, TemporalProperties properties) {
+    return WorkflowClient.newInstance(
+        service, WorkflowClientOptions.newBuilder().setNamespace(properties.namespace()).build());
+  }
 }

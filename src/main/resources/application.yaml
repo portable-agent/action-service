@@ -5,15 +5,8 @@ spring:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/actions}
     username: ${DATABASE_USER:actions}
     password: ${DATABASE_PASSWORD:actions}
-  jpa:
-    open-in-view: false
-    hibernate:
-      ddl-auto: validate
-    properties:
-      hibernate:
-        jdbc.batch_size: 50
-        order_inserts: true
-        order_updates: true
+  jooq:
+    sql-dialect: POSTGRES
   security:
     oauth2:
       resourceserver:

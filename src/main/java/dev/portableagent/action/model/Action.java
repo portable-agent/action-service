@@ -1,0 +1,154 @@
+package dev.portableagent.action.model;
+
+import java.time.Instant;
+import java.util.Objects;
+import java.util.UUID;
+
+public class Action {
+  private final UUID id;
+  private final long version;
+  private final UUID tenantId;
+  private final UUID actorId;
+  private final String requestKey;
+  private final String kind;
+  private final String connector;
+  private final String payloadHash;
+  private ActionStatus status;
+  private final Instant createdAt;
+  private Instant updatedAt;
+
+  private Action(
+      UUID id,
+      long version,
+      UUID tenantId,
+      UUID actorId,
+      String requestKey,
+      String kind,
+      String connector,
+      String payloadHash,
+      ActionStatus status,
+      Instant createdAt,
+      Instant updatedAt) {
+    this.id = Objects.requireNonNull(id);
+    this.version = version;
+    this.tenantId = Objects.requireNonNull(tenantId);
+    this.actorId = Objects.requireNonNull(actorId);
+    this.requestKey = requireText(requestKey, "requestKey");
+    this.kind = requireText(kind, "kind");
+    this.connector = requireText(connector, "connector");
+    this.payloadHash = requireText(payloadHash, "payloadHash");
+    this.status = Objects.requireNonNull(status);
+    this.createdAt = Objects.requireNonNull(createdAt);
+    this.updatedAt = Objects.requireNonNull(updatedAt);
+  }
+
+  public static Action create(
+      UUID tenantId,
+      UUID actorId,
+      String requestKey,
+      String kind,
+      String connector,
+      String payloadHash,
+      Instant now) {
+    return new Action(
+        UUID.randomUUID(),
+        0,
+        tenantId,
+        actorId,
+        requestKey,
+        kind,
+        connector,
+        payloadHash,
+        ActionStatus.AWAITING_APPROVAL,
+        now,
+        now);
+  }
+
+  public static Action fromData(
+      UUID id,
+      long version,
+      UUID tenantId,
+      UUID actorId,
+      String requestKey,
+      String kind,
+      String connector,
+      String payloadHash,
+      ActionStatus status,
+      Instant createdAt,
+      Instant updatedAt) {
+    return new Action(
+        id,
+        version,
+        tenantId,
+        actorId,
+        requestKey,
+        kind,
+        connector,
+        payloadHash,
+        status,
+        createdAt,
+        updatedAt);
+  }
+
+  public void applyDecision(ActionDecision decision, String checkedHash, Instant now) {
+    if (status != ActionStatus.AWAITING_APPROVAL) {
+      throw new IllegalStateException("Action is not waiting for approval");
+    }
+    if (!payloadHash.equals(checkedHash)) {
+      throw new IllegalArgumentException("Payload hash does not match");
+    }
+    status = decision == ActionDecision.CONFIRM ? ActionStatus.APPROVED : ActionStatus.CANCELLED;
+    updatedAt = Objects.requireNonNull(now);
+  }
+
+  private static String requireText(String value, String field) {
+    if (value == null || value.isBlank()) {
+      throw new IllegalArgumentException(field + " must not be blank");
+    }
+    return value;
+  }
+
+  public UUID getId() {
+    return id;
+  }
+
+  public long getVersion() {
+    return version;
+  }
+
+  public UUID getTenantId() {
+    return tenantId;
+  }
+
+  public UUID getActorId() {
+    return actorId;
+  }
+
+  public String getRequestKey() {
+    return requestKey;
+  }
+
+  public String getKind() {
+    return kind;
+  }
+
+  public String getConnector() {
+    return connector;
+  }
+
+  public String getPayloadHash() {
+    return payloadHash;
+  }
+
+  public ActionStatus getStatus() {
+    return status;
+  }
+
+  public Instant getCreatedAt() {
+    return createdAt;
+  }
+
+  public Instant getUpdatedAt() {
+    return updatedAt;
+  }
+}
