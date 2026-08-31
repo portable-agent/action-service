@@ -8,6 +8,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import tools.jackson.databind.json.JsonMapper;
 
 @Testcontainers(disabledWithoutDocker = true)
 class ActionRepositoryTest {
@@ -49,8 +51,10 @@ class ActionRepositoryTest {
 
   @Test
   void save_whenActionIsValid_shouldReadSameAction() {
-    var repository = new ActionRepository(db);
+    var repository = repository(db);
     var tenantId = UUID.randomUUID();
+    var payload =
+        Map.<String, Object>of("title", "Demo", "attendees", List.of("person@example.test"));
     var action =
         Action.create(
             tenantId,
@@ -58,6 +62,7 @@ class ActionRepositoryTest {
             "request-123",
             "calendar.create_event",
             "calendar",
+            payload,
             "a".repeat(64),
             Instant.parse("2026-08-28T10:00:00Z"));
 
@@ -66,6 +71,7 @@ class ActionRepositoryTest {
     var saved = repository.findById(tenantId, action.getId());
     assertThat(saved).isPresent();
     assertThat(saved.orElseThrow().getRequestKey()).isEqualTo("request-123");
+    assertThat(saved.orElseThrow().getPayload()).isEqualTo(payload);
   }
 
   @Test
@@ -83,7 +89,7 @@ class ActionRepositoryTest {
       assertThat(List.of(firstSave.get(), secondSave.get())).containsExactlyInAnyOrder(true, false);
     }
 
-    assertThat(new ActionRepository(db).findByRequestKey(tenantId, "same-request")).isPresent();
+    assertThat(repository(db).findByRequestKey(tenantId, "same-request")).isPresent();
   }
 
   private boolean saveAfterStart(Action action, CountDownLatch start) throws Exception {
@@ -91,8 +97,7 @@ class ActionRepositoryTest {
     try (var taskConnection =
         DriverManager.getConnection(
             POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())) {
-      return new ActionRepository(DSL.using(taskConnection, SQLDialect.POSTGRES))
-          .saveIfMissing(action);
+      return repository(DSL.using(taskConnection, SQLDialect.POSTGRES)).saveIfMissing(action);
     }
   }
 
@@ -103,7 +108,12 @@ class ActionRepositoryTest {
         requestKey,
         "calendar.create_event",
         "fake-calendar",
+        Map.of("title", "Demo"),
         "a".repeat(64),
         Instant.parse("2026-08-28T10:00:00Z"));
+  }
+
+  private ActionRepository repository(DSLContext context) {
+    return new ActionRepository(context, JsonMapper.builder().build());
   }
 }

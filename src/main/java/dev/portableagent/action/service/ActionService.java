@@ -50,6 +50,7 @@ public class ActionService {
             request.requestKey(),
             request.kind(),
             request.connector(),
+            request.payload(),
             payloadHash.make(request.payload()),
             now);
     if (!actionRepository.saveIfMissing(action)) {
