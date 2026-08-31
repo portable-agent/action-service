@@ -12,7 +12,8 @@
 - `service` содержит сценарии и транзакции.
 - `repository` содержит только запросы jOOQ.
 - `model` не зависит от Spring, jOOQ и HTTP.
-- `dto` содержит request/response records.
+- `api` создаётся OpenAPI Generator в `build/`; generated-файлы не меняются вручную.
+- `controller` переводит generated API models в простые команды service-слоя.
 - `scheduler` отправляет outbox.
 - `workflow` содержит связь с Temporal.
 - Схема БД меняется только Flyway-миграциями.
@@ -34,6 +35,7 @@
 
 ```bash
 ./gradlew jooqCodegen
+./gradlew openApiGenerate
 ./gradlew spotlessApply test
 ./gradlew bootRun
 ```

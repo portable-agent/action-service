@@ -8,7 +8,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import dev.portableagent.action.dto.CreateActionRequest;
 import dev.portableagent.action.model.Action;
 import dev.portableagent.action.model.OutboxItem;
 import dev.portableagent.action.repository.ActionRepository;
@@ -44,7 +43,7 @@ class ActionServiceTest {
     var tenantId = UUID.randomUUID();
     var userId = UUID.randomUUID();
     var request =
-        new CreateActionRequest(
+        new CreateActionCommand(
             "calendar.create_event", "fake-calendar", Map.of("title", "Demo"), "request-123");
     when(actionRepository.findByRequestKey(tenantId, request.requestKey()))
         .thenReturn(Optional.empty());
@@ -73,7 +72,7 @@ class ActionServiceTest {
             "a".repeat(64),
             clock.instant());
     var request =
-        new CreateActionRequest(
+        new CreateActionCommand(
             "calendar.create_event", "fake-calendar", Map.of("title", "Demo"), "request-123");
     when(actionRepository.findByRequestKey(tenantId, request.requestKey()))
         .thenReturn(Optional.empty(), Optional.of(oldAction));
@@ -97,7 +96,7 @@ class ActionServiceTest {
             Map.of("title", "Demo"),
             "a".repeat(64),
             clock.instant());
-    var request = new CreateActionRequest("ignored", "ignored", Map.of("x", "y"), "request-123");
+    var request = new CreateActionCommand("ignored", "ignored", Map.of("x", "y"), "request-123");
     when(actionRepository.findByRequestKey(tenantId, request.requestKey()))
         .thenReturn(Optional.of(oldAction));
 
@@ -109,7 +108,7 @@ class ActionServiceTest {
   void create_whenKindIsNotCalendar_shouldRejectRequest() {
     var tenantId = UUID.randomUUID();
     var request =
-        new CreateActionRequest(
+        new CreateActionCommand(
             "task.create", "fake-calendar", Map.of("title", "Demo"), "request-123");
     when(actionRepository.findByRequestKey(tenantId, request.requestKey()))
         .thenReturn(Optional.empty());
@@ -126,7 +125,7 @@ class ActionServiceTest {
   void create_whenConnectorIsNotFakeCalendar_shouldRejectRequest() {
     var tenantId = UUID.randomUUID();
     var request =
-        new CreateActionRequest(
+        new CreateActionCommand(
             "calendar.create_event", "google-calendar", Map.of("title", "Demo"), "request-123");
     when(actionRepository.findByRequestKey(tenantId, request.requestKey()))
         .thenReturn(Optional.empty());

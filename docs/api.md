@@ -1,6 +1,7 @@
 # API
 
-Точный публичный контракт хранится в репозитории `portable-agent/contracts`.
+Точный публичный контракт хранится в репозитории `portable-agent/contracts`. Версионный снимок лежит в
+`src/main/openapi`, а Java interface и models создаются в `build/`.
 
 Технический каркас содержит три маршрута:
 

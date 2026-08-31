@@ -2,6 +2,7 @@ plugins {
     java
     jacoco
     id("org.jooq.jooq-codegen-gradle") version "3.21.7"
+    id("org.openapi.generator") version "7.24.0"
     id("com.diffplug.spotless") version "8.10.0"
     id("org.springframework.boot") version "4.1.1"
     id("io.spring.dependency-management") version "1.1.7"
@@ -35,7 +36,8 @@ dependencies {
     jooqCodegen("org.jooq:jooq-meta-extensions:3.21.7")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("org.springframework.security:spring-security-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-security-test")
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testImplementation("org.testcontainers:testcontainers-junit-jupiter")
     testImplementation("org.testcontainers:testcontainers-postgresql")
@@ -77,6 +79,36 @@ jooq {
 
 sourceSets.main {
     java.srcDir("build/generated-src/jooq/main")
+    java.srcDir(layout.buildDirectory.dir("generated-src/openapi/src/main/java"))
+}
+
+openApiGenerate {
+    generatorName.set("spring")
+    inputSpec.set("$projectDir/src/main/openapi/action-api.yaml")
+    outputDir.set(
+        layout.buildDirectory
+            .dir("generated-src/openapi")
+            .get()
+            .asFile.absolutePath,
+    )
+    apiPackage.set("dev.portableagent.action.api")
+    modelPackage.set("dev.portableagent.action.api.model")
+    configOptions.set(
+        mapOf(
+            "annotationLibrary" to "none",
+            "documentationProvider" to "none",
+            "hideGenerationTimestamp" to "true",
+            "interfaceOnly" to "true",
+            "openApiNullable" to "false",
+            "performBeanValidation" to "true",
+            "skipDefaultInterface" to "true",
+            "useResponseEntity" to "true",
+            "useSpringBoot4" to "true",
+            "useSpringBuiltInValidation" to "true",
+            "useSwaggerUI" to "false",
+            "useTags" to "true",
+        ),
+    )
 }
 
 spotless {
@@ -99,7 +131,7 @@ spotless {
 }
 
 tasks.compileJava {
-    dependsOn(tasks.jooqCodegen)
+    dependsOn(tasks.jooqCodegen, tasks.openApiGenerate)
 }
 
 tasks.withType<Test> {

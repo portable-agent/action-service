@@ -1,7 +1,5 @@
 package dev.portableagent.action.service;
 
-import dev.portableagent.action.dto.CreateActionRequest;
-import dev.portableagent.action.dto.DecideActionRequest;
 import dev.portableagent.action.exception.ActionNotFound;
 import dev.portableagent.action.model.Action;
 import dev.portableagent.action.model.OutboxItem;
@@ -34,7 +32,7 @@ public class ActionService {
   }
 
   @Transactional
-  public Action create(UUID tenantId, UUID userId, CreateActionRequest request) {
+  public Action create(UUID tenantId, UUID userId, CreateActionCommand request) {
     var oldAction = actionRepository.findByRequestKey(tenantId, request.requestKey());
     if (oldAction.isPresent()) {
       return oldAction.get();
@@ -62,7 +60,7 @@ public class ActionService {
     return action;
   }
 
-  private void checkAllowed(CreateActionRequest request) {
+  private void checkAllowed(CreateActionCommand request) {
     if (!CALENDAR_ACTION.equals(request.kind())) {
       throw new IllegalArgumentException("Only calendar.create_event is supported");
     }
@@ -79,7 +77,7 @@ public class ActionService {
   }
 
   @Transactional
-  public Action decide(UUID tenantId, UUID actionId, DecideActionRequest request) {
+  public Action decide(UUID tenantId, UUID actionId, DecideActionCommand request) {
     var action = get(tenantId, actionId);
     action.applyDecision(request.decision(), request.payloadHash(), clock.instant());
     actionRepository.update(action);
