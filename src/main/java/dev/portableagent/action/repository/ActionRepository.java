@@ -34,20 +34,24 @@ public class ActionRepository {
         .fetchOptional(this::toAction);
   }
 
-  public void save(Action action) {
-    db.insertInto(ACTION_PROPOSALS)
-        .set(ACTION_PROPOSALS.ID, action.getId())
-        .set(ACTION_PROPOSALS.VERSION, action.getVersion())
-        .set(ACTION_PROPOSALS.TENANT_ID, action.getTenantId())
-        .set(ACTION_PROPOSALS.ACTOR_ID, action.getActorId())
-        .set(ACTION_PROPOSALS.IDEMPOTENCY_KEY, action.getRequestKey())
-        .set(ACTION_PROPOSALS.KIND, action.getKind())
-        .set(ACTION_PROPOSALS.CONNECTOR, action.getConnector())
-        .set(ACTION_PROPOSALS.PAYLOAD_HASH, action.getPayloadHash())
-        .set(ACTION_PROPOSALS.STATUS, action.getStatus().name())
-        .set(ACTION_PROPOSALS.CREATED_AT, utc(action.getCreatedAt()))
-        .set(ACTION_PROPOSALS.UPDATED_AT, utc(action.getUpdatedAt()))
-        .execute();
+  public boolean saveIfMissing(Action action) {
+    int changed =
+        db.insertInto(ACTION_PROPOSALS)
+            .set(ACTION_PROPOSALS.ID, action.getId())
+            .set(ACTION_PROPOSALS.VERSION, action.getVersion())
+            .set(ACTION_PROPOSALS.TENANT_ID, action.getTenantId())
+            .set(ACTION_PROPOSALS.ACTOR_ID, action.getActorId())
+            .set(ACTION_PROPOSALS.IDEMPOTENCY_KEY, action.getRequestKey())
+            .set(ACTION_PROPOSALS.KIND, action.getKind())
+            .set(ACTION_PROPOSALS.CONNECTOR, action.getConnector())
+            .set(ACTION_PROPOSALS.PAYLOAD_HASH, action.getPayloadHash())
+            .set(ACTION_PROPOSALS.STATUS, action.getStatus().name())
+            .set(ACTION_PROPOSALS.CREATED_AT, utc(action.getCreatedAt()))
+            .set(ACTION_PROPOSALS.UPDATED_AT, utc(action.getUpdatedAt()))
+            .onConflict(ACTION_PROPOSALS.TENANT_ID, ACTION_PROPOSALS.IDEMPOTENCY_KEY)
+            .doNothing()
+            .execute();
+    return changed == 1;
   }
 
   public void update(Action action) {
