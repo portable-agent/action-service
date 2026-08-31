@@ -2,6 +2,7 @@ package dev.portableagent.action.dto;
 
 import dev.portableagent.action.model.Action;
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
 public record ActionResponse(
@@ -9,6 +10,7 @@ public record ActionResponse(
     String status,
     String kind,
     String connector,
+    Map<String, Object> payload,
     String payloadHash,
     Instant createdAt,
     Instant updatedAt) {
@@ -18,6 +20,7 @@ public record ActionResponse(
         action.getStatus().name(),
         action.getKind(),
         action.getConnector(),
+        action.getPayload(),
         action.getPayloadHash(),
         action.getCreatedAt(),
         action.getUpdatedAt());

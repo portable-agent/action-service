@@ -69,6 +69,7 @@ class ActionServiceTest {
             "request-123",
             "calendar.create_event",
             "fake-calendar",
+            Map.of("title", "Demo"),
             "a".repeat(64),
             clock.instant());
     var request =
@@ -93,6 +94,7 @@ class ActionServiceTest {
             "request-123",
             "calendar.create_event",
             "calendar",
+            Map.of("title", "Demo"),
             "a".repeat(64),
             clock.instant());
     var request = new CreateActionRequest("ignored", "ignored", Map.of("x", "y"), "request-123");

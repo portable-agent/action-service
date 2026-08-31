@@ -1,6 +1,10 @@
 package dev.portableagent.action.model;
 
 import java.time.Instant;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -12,6 +16,7 @@ public class Action {
   private final String requestKey;
   private final String kind;
   private final String connector;
+  private final Map<String, Object> payload;
   private final String payloadHash;
   private ActionStatus status;
   private final Instant createdAt;
@@ -25,6 +30,7 @@ public class Action {
       String requestKey,
       String kind,
       String connector,
+      Map<String, Object> payload,
       String payloadHash,
       ActionStatus status,
       Instant createdAt,
@@ -36,6 +42,7 @@ public class Action {
     this.requestKey = requireText(requestKey, "requestKey");
     this.kind = requireText(kind, "kind");
     this.connector = requireText(connector, "connector");
+    this.payload = copyPayload(payload);
     this.payloadHash = requireText(payloadHash, "payloadHash");
     this.status = Objects.requireNonNull(status);
     this.createdAt = Objects.requireNonNull(createdAt);
@@ -48,6 +55,7 @@ public class Action {
       String requestKey,
       String kind,
       String connector,
+      Map<String, Object> payload,
       String payloadHash,
       Instant now) {
     return new Action(
@@ -58,6 +66,7 @@ public class Action {
         requestKey,
         kind,
         connector,
+        payload,
         payloadHash,
         ActionStatus.AWAITING_APPROVAL,
         now,
@@ -72,6 +81,7 @@ public class Action {
       String requestKey,
       String kind,
       String connector,
+      Map<String, Object> payload,
       String payloadHash,
       ActionStatus status,
       Instant createdAt,
@@ -84,6 +94,7 @@ public class Action {
         requestKey,
         kind,
         connector,
+        payload,
         payloadHash,
         status,
         createdAt,
@@ -104,6 +115,33 @@ public class Action {
   private static String requireText(String value, String field) {
     if (value == null || value.isBlank()) {
       throw new IllegalArgumentException(field + " must not be blank");
+    }
+    return value;
+  }
+
+  private static Map<String, Object> copyPayload(Map<String, Object> payload) {
+    if (payload == null || payload.isEmpty()) {
+      throw new IllegalArgumentException("payload must not be empty");
+    }
+    var copy = new LinkedHashMap<String, Object>();
+    payload.forEach((key, value) -> copy.put(requireText(key, "payload key"), copyValue(value)));
+    return Collections.unmodifiableMap(copy);
+  }
+
+  private static Object copyValue(Object value) {
+    if (value instanceof Map<?, ?> map) {
+      var copy = new LinkedHashMap<String, Object>();
+      map.forEach(
+          (key, child) -> {
+            if (!(key instanceof String textKey)) {
+              throw new IllegalArgumentException("payload key must be text");
+            }
+            copy.put(requireText(textKey, "payload key"), copyValue(child));
+          });
+      return Collections.unmodifiableMap(copy);
+    }
+    if (value instanceof List<?> list) {
+      return list.stream().map(Action::copyValue).toList();
     }
     return value;
   }
@@ -134,6 +172,10 @@ public class Action {
 
   public String getConnector() {
     return connector;
+  }
+
+  public Map<String, Object> getPayload() {
+    return payload;
   }
 
   public String getPayloadHash() {

@@ -6,18 +6,25 @@ import dev.portableagent.action.model.Action;
 import dev.portableagent.action.model.ActionStatus;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.jooq.DSLContext;
+import org.jooq.JSON;
 import org.jooq.Record;
 import org.springframework.stereotype.Repository;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 
 @Repository
 public class ActionRepository {
   private final DSLContext db;
+  private final JsonMapper jsonMapper;
 
-  public ActionRepository(DSLContext db) {
+  public ActionRepository(DSLContext db, JsonMapper jsonMapper) {
     this.db = db;
+    this.jsonMapper = jsonMapper;
   }
 
   public Optional<Action> findByRequestKey(UUID tenantId, String requestKey) {
@@ -44,6 +51,7 @@ public class ActionRepository {
             .set(ACTION_PROPOSALS.IDEMPOTENCY_KEY, action.getRequestKey())
             .set(ACTION_PROPOSALS.KIND, action.getKind())
             .set(ACTION_PROPOSALS.CONNECTOR, action.getConnector())
+            .set(ACTION_PROPOSALS.PAYLOAD, toJson(action.getPayload()))
             .set(ACTION_PROPOSALS.PAYLOAD_HASH, action.getPayloadHash())
             .set(ACTION_PROPOSALS.STATUS, action.getStatus().name())
             .set(ACTION_PROPOSALS.CREATED_AT, utc(action.getCreatedAt()))
@@ -78,10 +86,27 @@ public class ActionRepository {
         row.get(ACTION_PROPOSALS.IDEMPOTENCY_KEY),
         row.get(ACTION_PROPOSALS.KIND),
         row.get(ACTION_PROPOSALS.CONNECTOR),
+        fromJson(row.get(ACTION_PROPOSALS.PAYLOAD)),
         row.get(ACTION_PROPOSALS.PAYLOAD_HASH),
         ActionStatus.valueOf(row.get(ACTION_PROPOSALS.STATUS)),
         row.get(ACTION_PROPOSALS.CREATED_AT).toInstant(),
         row.get(ACTION_PROPOSALS.UPDATED_AT).toInstant());
+  }
+
+  private JSON toJson(Map<String, Object> payload) {
+    try {
+      return JSON.valueOf(jsonMapper.writeValueAsString(payload));
+    } catch (JacksonException error) {
+      throw new IllegalArgumentException("Payload is not valid JSON", error);
+    }
+  }
+
+  private Map<String, Object> fromJson(JSON payload) {
+    try {
+      return jsonMapper.readValue(payload.data(), new TypeReference<>() {});
+    } catch (JacksonException error) {
+      throw new IllegalStateException("Saved payload is not valid JSON", error);
+    }
   }
 
   private OffsetDateTime utc(java.time.Instant value) {
