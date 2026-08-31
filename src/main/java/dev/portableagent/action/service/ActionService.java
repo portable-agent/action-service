@@ -14,6 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ActionService {
+  private static final String CALENDAR_ACTION = "calendar.create_event";
+  private static final String FAKE_CALENDAR = "fake-calendar";
+
   private final ActionRepository actionRepository;
   private final OutboxRepository outboxRepository;
   private final PayloadHash payloadHash;
@@ -37,6 +40,8 @@ public class ActionService {
       return oldAction.get();
     }
 
+    checkAllowed(request);
+
     var now = clock.instant();
     var action =
         Action.create(
@@ -47,9 +52,22 @@ public class ActionService {
             request.connector(),
             payloadHash.make(request.payload()),
             now);
-    actionRepository.save(action);
+    if (!actionRepository.saveIfMissing(action)) {
+      return actionRepository
+          .findByRequestKey(tenantId, request.requestKey())
+          .orElseThrow(() -> new IllegalStateException("Saved action was not found"));
+    }
     outboxRepository.save(OutboxItem.create(action.getId(), now));
     return action;
+  }
+
+  private void checkAllowed(CreateActionRequest request) {
+    if (!CALENDAR_ACTION.equals(request.kind())) {
+      throw new IllegalArgumentException("Only calendar.create_event is supported");
+    }
+    if (!FAKE_CALENDAR.equals(request.connector())) {
+      throw new IllegalArgumentException("Only fake-calendar is supported");
+    }
   }
 
   @Transactional(readOnly = true)
