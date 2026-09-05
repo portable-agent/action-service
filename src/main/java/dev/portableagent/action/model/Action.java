@@ -10,7 +10,7 @@ import java.util.UUID;
 
 public class Action {
   private final UUID id;
-  private final long version;
+  private long version;
   private final UUID tenantId;
   private final UUID actorId;
   private final String requestKey;
@@ -19,6 +19,7 @@ public class Action {
   private final Map<String, Object> payload;
   private final String payloadHash;
   private ActionStatus status;
+  private ActionResult result;
   private final Instant createdAt;
   private Instant updatedAt;
 
@@ -33,6 +34,7 @@ public class Action {
       Map<String, Object> payload,
       String payloadHash,
       ActionStatus status,
+      ActionResult result,
       Instant createdAt,
       Instant updatedAt) {
     this.id = Objects.requireNonNull(id);
@@ -45,6 +47,13 @@ public class Action {
     this.payload = copyPayload(payload);
     this.payloadHash = requireText(payloadHash, "payloadHash");
     this.status = Objects.requireNonNull(status);
+    this.result = result;
+    if (status == ActionStatus.SUCCEEDED && result == null) {
+      throw new IllegalArgumentException("Succeeded action must have a result");
+    }
+    if (status != ActionStatus.SUCCEEDED && result != null) {
+      throw new IllegalArgumentException("Only succeeded action can have a result");
+    }
     this.createdAt = Objects.requireNonNull(createdAt);
     this.updatedAt = Objects.requireNonNull(updatedAt);
   }
@@ -69,6 +78,7 @@ public class Action {
         payload,
         payloadHash,
         ActionStatus.AWAITING_APPROVAL,
+        null,
         now,
         now);
   }
@@ -84,6 +94,7 @@ public class Action {
       Map<String, Object> payload,
       String payloadHash,
       ActionStatus status,
+      ActionResult result,
       Instant createdAt,
       Instant updatedAt) {
     return new Action(
@@ -97,6 +108,7 @@ public class Action {
         payload,
         payloadHash,
         status,
+        result,
         createdAt,
         updatedAt);
   }
@@ -110,6 +122,27 @@ public class Action {
     }
     status = decision == ActionDecision.CONFIRM ? ActionStatus.APPROVED : ActionStatus.CANCELLED;
     updatedAt = Objects.requireNonNull(now);
+  }
+
+  public void startExecution(Instant now) {
+    if (status != ActionStatus.APPROVED) {
+      throw new IllegalStateException("Action is not approved");
+    }
+    status = ActionStatus.EXECUTING;
+    updatedAt = Objects.requireNonNull(now);
+  }
+
+  public void succeed(String eventId, Instant now) {
+    if (status != ActionStatus.EXECUTING) {
+      throw new IllegalStateException("Action is not executing");
+    }
+    result = new ActionResult(eventId);
+    status = ActionStatus.SUCCEEDED;
+    updatedAt = Objects.requireNonNull(now);
+  }
+
+  public void markSaved() {
+    version++;
   }
 
   private static String requireText(String value, String field) {
@@ -184,6 +217,10 @@ public class Action {
 
   public ActionStatus getStatus() {
     return status;
+  }
+
+  public ActionResult getResult() {
+    return result;
   }
 
   public Instant getCreatedAt() {

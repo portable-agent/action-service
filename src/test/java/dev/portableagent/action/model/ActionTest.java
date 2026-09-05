@@ -75,6 +75,27 @@ class ActionTest {
         .hasMessageContaining("Payload hash");
   }
 
+  @Test
+  void succeed_whenActionIsExecuting_shouldStoreEventId() {
+    var action = action();
+    action.applyDecision(ActionDecision.CONFIRM, "a".repeat(64), NOW.plusSeconds(1));
+    action.startExecution(NOW.plusSeconds(2));
+
+    action.succeed("event-123", NOW.plusSeconds(3));
+
+    assertThat(action.getStatus()).isEqualTo(ActionStatus.SUCCEEDED);
+    assertThat(action.getResult()).isEqualTo(new ActionResult("event-123"));
+  }
+
+  @Test
+  void succeed_whenActionIsNotExecuting_shouldRejectResult() {
+    var action = action();
+
+    assertThatThrownBy(() -> action.succeed("event-123", NOW.plusSeconds(1)))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("executing");
+  }
+
   private Action action() {
     return Action.create(
         UUID.randomUUID(),

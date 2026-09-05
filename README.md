@@ -33,11 +33,12 @@ HTTP-интерфейс и API-модели создаёт OpenAPI Generator и�
 `src/main/openapi/action-api.yaml`. Снимок обновляется только из GitHub Release репозитория contracts:
 
 ```powershell
-pwsh ./scripts/update-contract.ps1 -Version 1.0.0
+pwsh ./scripts/update-contract.ps1 -Version 1.1.0
 ```
 
 Миграция `V2` один раз удаляет тестовые записи старого pre-MVP-каркаса: в схеме `V1` payload не
 хранился, поэтому восстановить его из одного hash невозможно. Production-данных у этой версии нет.
+Миграция `V3` добавляет nullable JSONB-поле `result`. Оно заполняется только после успешного выполнения.
 
 ## Где читать дальше
 
