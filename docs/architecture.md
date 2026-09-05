@@ -13,7 +13,8 @@ controller -> service -> repository -> PostgreSQL
 ## Папки
 
 - `controller` — HTTP без бизнес-логики.
-- `dto` — входные и выходные данные HTTP.
+- `api` — generated интерфейс и HTTP-модели из закреплённого OpenAPI.
+- `controller` — HTTP-adapter между generated API и командами service-слоя.
 - `service` — сценарии, проверки и транзакции.
 - `repository` — типобезопасные запросы jOOQ.
 - `model` — простые Java-классы предметной области.
@@ -23,6 +24,10 @@ controller -> service -> repository -> PostgreSQL
 
 Flyway SQL — единственный источник схемы. Gradle создаёт Java-классы jOOQ из тех же SQL-файлов до
 компиляции. Поэтому код и схема не расходятся.
+
+OpenAPI из release `portable-agent/contracts` хранится в `src/main/openapi`. Gradle создаёт интерфейс
+`ActionsApi` и HTTP-модели в `build/generated-src/openapi`. Generated-код не коммитится. Контроллер
+реализует этот интерфейс, а service и domain не зависят от HTTP-классов.
 
 ## Текущий продуктовый срез
 
