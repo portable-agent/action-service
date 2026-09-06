@@ -62,4 +62,27 @@ class ActionMapperTest {
     assertThat(response.getPayload()).isEqualTo(action.getPayload());
     assertThat(response.getCreatedAt().toInstant()).isEqualTo(now);
   }
+
+  @Test
+  void toResponse_whenActionSucceeded_shouldMapEventId() {
+    var now = Instant.parse("2026-09-01T10:00:00Z");
+    var action =
+        Action.create(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            "request-123",
+            "calendar.create_event",
+            "fake-calendar",
+            Map.of("title", "Demo"),
+            "a".repeat(64),
+            now);
+    action.applyDecision(ActionDecision.CONFIRM, "a".repeat(64), now.plusSeconds(1));
+    action.startExecution(now.plusSeconds(2));
+    action.succeed("event-123", now.plusSeconds(3));
+
+    var response = ActionMapper.toResponse(action);
+
+    assertThat(response.getStatus().getValue()).isEqualTo("SUCCEEDED");
+    assertThat(response.getResult().getEventId()).isEqualTo("event-123");
+  }
 }

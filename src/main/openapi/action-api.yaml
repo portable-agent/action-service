@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Portable Agent Action API
-  version: 1.0.0
+  version: 1.1.0
   description: Создание, просмотр и подтверждение безопасных действий агента.
   license:
     name: Apache-2.0
@@ -158,8 +158,21 @@ components:
           additionalProperties: true
           description: Сохранённые данные, которые пользователь подтверждает по payloadHash.
         payloadHash: { type: string, pattern: "^[a-f0-9]{64}$" }
+        result:
+          $ref: "#/components/schemas/CalendarActionResult"
+          description: Результат успешного выполнения. До состояния SUCCEEDED поле отсутствует.
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    CalendarActionResult:
+      type: object
+      additionalProperties: false
+      required: [eventId]
+      properties:
+        eventId:
+          type: string
+          minLength: 1
+          maxLength: 256
+          description: Стабильный идентификатор события у календарного коннектора.
     Problem:
       type: object
       required: [type, title, status]

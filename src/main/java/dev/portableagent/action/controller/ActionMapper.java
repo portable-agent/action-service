@@ -2,6 +2,7 @@ package dev.portableagent.action.controller;
 
 import dev.portableagent.action.api.model.ActionDecisionRequest;
 import dev.portableagent.action.api.model.ActionResponse;
+import dev.portableagent.action.api.model.CalendarActionResult;
 import dev.portableagent.action.api.model.ProposeActionRequest;
 import dev.portableagent.action.model.Action;
 import dev.portableagent.action.model.ActionDecision;
@@ -27,14 +28,19 @@ final class ActionMapper {
   }
 
   static ActionResponse toResponse(Action action) {
-    return new ActionResponse(
-        action.getId(),
-        ActionResponse.StatusEnum.fromValue(action.getStatus().name()),
-        action.getKind(),
-        action.getConnector(),
-        action.getPayload(),
-        action.getPayloadHash(),
-        OffsetDateTime.ofInstant(action.getCreatedAt(), ZoneOffset.UTC),
-        OffsetDateTime.ofInstant(action.getUpdatedAt(), ZoneOffset.UTC));
+    var response =
+        new ActionResponse(
+            action.getId(),
+            ActionResponse.StatusEnum.fromValue(action.getStatus().name()),
+            action.getKind(),
+            action.getConnector(),
+            action.getPayload(),
+            action.getPayloadHash(),
+            OffsetDateTime.ofInstant(action.getCreatedAt(), ZoneOffset.UTC),
+            OffsetDateTime.ofInstant(action.getUpdatedAt(), ZoneOffset.UTC));
+    if (action.getResult() != null) {
+      response.setResult(new CalendarActionResult(action.getResult().eventId()));
+    }
+    return response;
   }
 }

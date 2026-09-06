@@ -3,6 +3,7 @@ package dev.portableagent.action.repository;
 import static dev.portableagent.action.db.tables.ActionProposals.ACTION_PROPOSALS;
 
 import dev.portableagent.action.model.Action;
+import dev.portableagent.action.model.ActionResult;
 import dev.portableagent.action.model.ActionStatus;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -66,6 +67,7 @@ public class ActionRepository {
     int changed =
         db.update(ACTION_PROPOSALS)
             .set(ACTION_PROPOSALS.STATUS, action.getStatus().name())
+            .set(ACTION_PROPOSALS.RESULT, toJson(action.getResult()))
             .set(ACTION_PROPOSALS.UPDATED_AT, utc(action.getUpdatedAt()))
             .set(ACTION_PROPOSALS.VERSION, action.getVersion() + 1)
             .where(ACTION_PROPOSALS.ID.eq(action.getId()))
@@ -75,6 +77,7 @@ public class ActionRepository {
     if (changed != 1) {
       throw new IllegalStateException("Action was changed by another request");
     }
+    action.markSaved();
   }
 
   private Action toAction(Record row) {
@@ -89,6 +92,7 @@ public class ActionRepository {
         fromJson(row.get(ACTION_PROPOSALS.PAYLOAD)),
         row.get(ACTION_PROPOSALS.PAYLOAD_HASH),
         ActionStatus.valueOf(row.get(ACTION_PROPOSALS.STATUS)),
+        fromJsonResult(row.get(ACTION_PROPOSALS.RESULT)),
         row.get(ACTION_PROPOSALS.CREATED_AT).toInstant(),
         row.get(ACTION_PROPOSALS.UPDATED_AT).toInstant());
   }
@@ -99,6 +103,22 @@ public class ActionRepository {
     } catch (JacksonException error) {
       throw new IllegalArgumentException("Payload is not valid JSON", error);
     }
+  }
+
+  private JSON toJson(ActionResult result) {
+    return result == null ? null : toJson(Map.of("eventId", result.eventId()));
+  }
+
+  private ActionResult fromJsonResult(JSON result) {
+    if (result == null) {
+      return null;
+    }
+    var data = fromJson(result);
+    var eventId = data.get("eventId");
+    if (!(eventId instanceof String text)) {
+      throw new IllegalStateException("Saved result does not contain eventId");
+    }
+    return new ActionResult(text);
   }
 
   private Map<String, Object> fromJson(JSON payload) {

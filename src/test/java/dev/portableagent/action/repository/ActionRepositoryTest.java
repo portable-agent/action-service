@@ -3,6 +3,8 @@ package dev.portableagent.action.repository;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.portableagent.action.model.Action;
+import dev.portableagent.action.model.ActionDecision;
+import dev.portableagent.action.model.ActionStatus;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -72,6 +74,26 @@ class ActionRepositoryTest {
     assertThat(saved).isPresent();
     assertThat(saved.orElseThrow().getRequestKey()).isEqualTo("request-123");
     assertThat(saved.orElseThrow().getPayload()).isEqualTo(payload);
+  }
+
+  @Test
+  void update_whenActionSucceeded_shouldStoreResult() {
+    var repository = repository(db);
+    var tenantId = UUID.randomUUID();
+    var action = action(tenantId, "result-request");
+    assertThat(repository.saveIfMissing(action)).isTrue();
+    action.applyDecision(
+        ActionDecision.CONFIRM, "a".repeat(64), Instant.parse("2026-08-28T10:00:01Z"));
+    repository.update(action);
+    action.startExecution(Instant.parse("2026-08-28T10:00:02Z"));
+    repository.update(action);
+    action.succeed("event-123", Instant.parse("2026-08-28T10:00:03Z"));
+
+    repository.update(action);
+
+    var saved = repository.findById(tenantId, action.getId()).orElseThrow();
+    assertThat(saved.getStatus()).isEqualTo(ActionStatus.SUCCEEDED);
+    assertThat(saved.getResult().eventId()).isEqualTo("event-123");
   }
 
   @Test
