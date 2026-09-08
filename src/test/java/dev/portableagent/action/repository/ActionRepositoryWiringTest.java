@@ -9,14 +9,14 @@ import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 class ActionRepositoryWiringTest {
-  @Test
-  void context_whenBootJacksonIsUsed_shouldCreateRepository() {
-    try (var context = new AnnotationConfigApplicationContext()) {
-      context.registerBean(DSLContext.class, () -> mock(DSLContext.class));
-      context.register(JacksonAutoConfiguration.class, ActionRepository.class);
-      context.refresh();
+    @Test
+    void context_whenBootJacksonIsUsed_shouldCreateRepository() {
+        try (var context = new AnnotationConfigApplicationContext()) {
+            context.registerBean(DSLContext.class, () -> mock(DSLContext.class));
+            context.register(JacksonAutoConfiguration.class, ActionRepository.class);
+            context.refresh();
 
-      assertThat(context.getBean(ActionRepository.class)).isNotNull();
+            assertThat(context.getBean(ActionRepository.class)).isNotNull();
+        }
     }
-  }
 }

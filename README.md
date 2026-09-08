@@ -9,6 +9,7 @@
 
 Java 25, Spring Boot 4.1, Spring MVC, jOOQ, PostgreSQL, Flyway, Temporal Java SDK,
 OAuth2 Resource Server, Micrometer и Testcontainers. JPA и Hibernate не используются.
+Java-код форматируется Palantir Java Format с отступом в четыре пробела, без символов tab.
 
 ## Запуск
 
@@ -39,6 +40,10 @@ pwsh ./scripts/update-contract.ps1 -Version 1.1.0
 Миграция `V2` один раз удаляет тестовые записи старого pre-MVP-каркаса: в схеме `V1` payload не
 хранился, поэтому восстановить его из одного hash невозможно. Production-данных у этой версии нет.
 Миграция `V3` добавляет nullable JSONB-поле `result`. Оно заполняется только после успешного выполнения.
+
+Подтверждение и отмена безопасны при повторе того же запроса. Внутренние операции worker
+`start`, `succeed` и `fail` также идемпотентны: повтор не меняет версию и время действия. Другой
+`eventId` после успеха отклоняется как конфликт.
 
 ## Где читать дальше
 

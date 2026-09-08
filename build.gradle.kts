@@ -116,7 +116,7 @@ openApiGenerate {
 spotless {
     java {
         target("src/**/*.java")
-        googleJavaFormat()
+        palantirJavaFormat()
         removeUnusedImports()
         trimTrailingWhitespace()
         endWithNewline()
