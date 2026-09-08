@@ -113,32 +113,77 @@ public class Action {
         updatedAt);
   }
 
-  public void applyDecision(ActionDecision decision, String checkedHash, Instant now) {
-    if (status != ActionStatus.AWAITING_APPROVAL) {
-      throw new IllegalStateException("Action is not waiting for approval");
-    }
+  public boolean applyDecision(ActionDecision decision, String checkedHash, Instant now) {
+    Objects.requireNonNull(decision);
+    Objects.requireNonNull(now);
     if (!payloadHash.equals(checkedHash)) {
       throw new IllegalArgumentException("Payload hash does not match");
     }
-    status = decision == ActionDecision.CONFIRM ? ActionStatus.APPROVED : ActionStatus.CANCELLED;
-    updatedAt = Objects.requireNonNull(now);
+    var nextStatus =
+        decision == ActionDecision.CONFIRM ? ActionStatus.APPROVED : ActionStatus.CANCELLED;
+    if (decisionAlreadyApplied(decision)) {
+      return false;
+    }
+    if (status != ActionStatus.AWAITING_APPROVAL) {
+      throw new IllegalStateException("Action is not waiting for approval");
+    }
+    status = nextStatus;
+    updatedAt = now;
+    return true;
   }
 
-  public void startExecution(Instant now) {
+  private boolean decisionAlreadyApplied(ActionDecision decision) {
+    if (decision == ActionDecision.CANCEL) {
+      return status == ActionStatus.CANCELLED;
+    }
+    return status == ActionStatus.APPROVED
+        || status == ActionStatus.EXECUTING
+        || status == ActionStatus.SUCCEEDED
+        || status == ActionStatus.FAILED;
+  }
+
+  public boolean startExecution(Instant now) {
+    Objects.requireNonNull(now);
+    if (status == ActionStatus.EXECUTING) {
+      return false;
+    }
     if (status != ActionStatus.APPROVED) {
       throw new IllegalStateException("Action is not approved");
     }
     status = ActionStatus.EXECUTING;
-    updatedAt = Objects.requireNonNull(now);
+    updatedAt = now;
+    return true;
   }
 
-  public void succeed(String eventId, Instant now) {
+  public boolean succeed(String eventId, Instant now) {
+    var newResult = new ActionResult(eventId);
+    Objects.requireNonNull(now);
+    if (status == ActionStatus.SUCCEEDED) {
+      if (newResult.equals(result)) {
+        return false;
+      }
+      throw new IllegalStateException("Action already has a different result");
+    }
     if (status != ActionStatus.EXECUTING) {
       throw new IllegalStateException("Action is not executing");
     }
-    result = new ActionResult(eventId);
+    result = newResult;
     status = ActionStatus.SUCCEEDED;
-    updatedAt = Objects.requireNonNull(now);
+    updatedAt = now;
+    return true;
+  }
+
+  public boolean fail(Instant now) {
+    Objects.requireNonNull(now);
+    if (status == ActionStatus.FAILED) {
+      return false;
+    }
+    if (status != ActionStatus.EXECUTING) {
+      throw new IllegalStateException("Action is not executing");
+    }
+    status = ActionStatus.FAILED;
+    updatedAt = now;
+    return true;
   }
 
   public void markSaved() {

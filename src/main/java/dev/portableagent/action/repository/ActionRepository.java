@@ -2,6 +2,7 @@ package dev.portableagent.action.repository;
 
 import static dev.portableagent.action.db.tables.ActionProposals.ACTION_PROPOSALS;
 
+import dev.portableagent.action.exception.ActionChanged;
 import dev.portableagent.action.model.Action;
 import dev.portableagent.action.model.ActionResult;
 import dev.portableagent.action.model.ActionStatus;
@@ -42,6 +43,12 @@ public class ActionRepository {
         .fetchOptional(this::toAction);
   }
 
+  public Optional<Action> findById(UUID actionId) {
+    return db.selectFrom(ACTION_PROPOSALS)
+        .where(ACTION_PROPOSALS.ID.eq(actionId))
+        .fetchOptional(this::toAction);
+  }
+
   public boolean saveIfMissing(Action action) {
     int changed =
         db.insertInto(ACTION_PROPOSALS)
@@ -75,7 +82,7 @@ public class ActionRepository {
             .and(ACTION_PROPOSALS.VERSION.eq(action.getVersion()))
             .execute();
     if (changed != 1) {
-      throw new IllegalStateException("Action was changed by another request");
+      throw new ActionChanged(action.getId());
     }
     action.markSaved();
   }

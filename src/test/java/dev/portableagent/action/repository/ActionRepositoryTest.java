@@ -1,7 +1,9 @@
 package dev.portableagent.action.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import dev.portableagent.action.exception.ActionChanged;
 import dev.portableagent.action.model.Action;
 import dev.portableagent.action.model.ActionDecision;
 import dev.portableagent.action.model.ActionStatus;
@@ -94,6 +96,44 @@ class ActionRepositoryTest {
     var saved = repository.findById(tenantId, action.getId()).orElseThrow();
     assertThat(saved.getStatus()).isEqualTo(ActionStatus.SUCCEEDED);
     assertThat(saved.getResult().eventId()).isEqualTo("event-123");
+  }
+
+  @Test
+  void update_whenActionFailed_shouldStoreFailedStateWithoutResult() {
+    var repository = repository(db);
+    var action = action(UUID.randomUUID(), "failed-request");
+    assertThat(repository.saveIfMissing(action)).isTrue();
+    action.applyDecision(
+        ActionDecision.CONFIRM, "a".repeat(64), Instant.parse("2026-08-28T10:00:01Z"));
+    repository.update(action);
+    action.startExecution(Instant.parse("2026-08-28T10:00:02Z"));
+    repository.update(action);
+    action.fail(Instant.parse("2026-08-28T10:00:03Z"));
+
+    repository.update(action);
+
+    var saved = repository.findById(action.getId()).orElseThrow();
+    assertThat(saved.getStatus()).isEqualTo(ActionStatus.FAILED);
+    assertThat(saved.getResult()).isNull();
+  }
+
+  @Test
+  void update_whenVersionChanged_shouldRejectOldAction() {
+    var repository = repository(db);
+    var tenantId = UUID.randomUUID();
+    var action = action(tenantId, "version-request");
+    assertThat(repository.saveIfMissing(action)).isTrue();
+    var first = repository.findById(tenantId, action.getId()).orElseThrow();
+    var second = repository.findById(tenantId, action.getId()).orElseThrow();
+    first.applyDecision(
+        ActionDecision.CONFIRM, first.getPayloadHash(), Instant.parse("2026-08-28T10:00:01Z"));
+    second.applyDecision(
+        ActionDecision.CONFIRM, second.getPayloadHash(), Instant.parse("2026-08-28T10:00:01Z"));
+    repository.update(first);
+
+    assertThatThrownBy(() -> repository.update(second))
+        .isInstanceOf(ActionChanged.class)
+        .hasMessageContaining(action.getId().toString());
   }
 
   @Test

@@ -1,5 +1,6 @@
 package dev.portableagent.action.service;
 
+import dev.portableagent.action.exception.ActionChanged;
 import dev.portableagent.action.exception.ActionNotFound;
 import dev.portableagent.action.model.Action;
 import dev.portableagent.action.model.OutboxItem;
@@ -7,6 +8,8 @@ import dev.portableagent.action.repository.ActionRepository;
 import dev.portableagent.action.repository.OutboxRepository;
 import java.time.Clock;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ActionService {
   private static final String CALENDAR_ACTION = "calendar.create_event";
   private static final String FAKE_CALENDAR = "fake-calendar";
+  private static final int CHANGE_TRIES = 3;
 
   private final ActionRepository actionRepository;
   private final OutboxRepository outboxRepository;
@@ -78,9 +82,44 @@ public class ActionService {
 
   @Transactional
   public Action decide(UUID tenantId, UUID actionId, DecideActionCommand request) {
-    var action = get(tenantId, actionId);
-    action.applyDecision(request.decision(), request.payloadHash(), clock.instant());
-    actionRepository.update(action);
-    return action;
+    return change(
+        () -> get(tenantId, actionId),
+        action -> action.applyDecision(request.decision(), request.payloadHash(), clock.instant()));
+  }
+
+  @Transactional
+  public Action start(UUID actionId) {
+    return change(() -> getForWork(actionId), action -> action.startExecution(clock.instant()));
+  }
+
+  @Transactional
+  public Action succeed(UUID actionId, String eventId) {
+    return change(() -> getForWork(actionId), action -> action.succeed(eventId, clock.instant()));
+  }
+
+  @Transactional
+  public Action fail(UUID actionId) {
+    return change(() -> getForWork(actionId), action -> action.fail(clock.instant()));
+  }
+
+  private Action getForWork(UUID actionId) {
+    return actionRepository.findById(actionId).orElseThrow(() -> new ActionNotFound(actionId));
+  }
+
+  private Action change(Supplier<Action> load, Function<Action, Boolean> apply) {
+    ActionChanged lastError = null;
+    for (int attempt = 0; attempt < CHANGE_TRIES; attempt++) {
+      var action = load.get();
+      if (!apply.apply(action)) {
+        return action;
+      }
+      try {
+        actionRepository.update(action);
+        return action;
+      } catch (ActionChanged error) {
+        lastError = error;
+      }
+    }
+    throw lastError;
   }
 }

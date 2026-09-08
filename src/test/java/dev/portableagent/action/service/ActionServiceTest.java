@@ -8,7 +8,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import dev.portableagent.action.exception.ActionChanged;
 import dev.portableagent.action.model.Action;
+import dev.portableagent.action.model.ActionDecision;
+import dev.portableagent.action.model.ActionStatus;
 import dev.portableagent.action.model.OutboxItem;
 import dev.portableagent.action.repository.ActionRepository;
 import dev.portableagent.action.repository.OutboxRepository;
@@ -136,5 +139,168 @@ class ActionServiceTest {
 
     verify(actionRepository, never()).saveIfMissing(any(Action.class));
     verifyNoInteractions(outboxRepository, payloadHash);
+  }
+
+  @Test
+  void decide_whenConfirmIsNew_shouldSaveApprovedAction() {
+    var action = action();
+    when(actionRepository.findById(action.getTenantId(), action.getId()))
+        .thenReturn(Optional.of(action));
+
+    var result =
+        service.decide(
+            action.getTenantId(),
+            action.getId(),
+            new DecideActionCommand(ActionDecision.CONFIRM, action.getPayloadHash()));
+
+    assertThat(result.getStatus()).isEqualTo(ActionStatus.APPROVED);
+    verify(actionRepository).update(action);
+  }
+
+  @Test
+  void decide_whenConfirmIsRepeated_shouldNotSaveAgain() {
+    var action = action();
+    action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), clock.instant());
+    when(actionRepository.findById(action.getTenantId(), action.getId()))
+        .thenReturn(Optional.of(action));
+
+    var result =
+        service.decide(
+            action.getTenantId(),
+            action.getId(),
+            new DecideActionCommand(ActionDecision.CONFIRM, action.getPayloadHash()));
+
+    assertThat(result.getStatus()).isEqualTo(ActionStatus.APPROVED);
+    verify(actionRepository, never()).update(action);
+  }
+
+  @Test
+  void decide_whenSameConfirmWinsRace_shouldReturnSavedState() {
+    var first = action();
+    var saved = sameAction(first);
+    saved.applyDecision(ActionDecision.CONFIRM, saved.getPayloadHash(), clock.instant());
+    when(actionRepository.findById(first.getTenantId(), first.getId()))
+        .thenReturn(Optional.of(first), Optional.of(saved));
+    org.mockito.Mockito.doThrow(new ActionChanged(first.getId()))
+        .when(actionRepository)
+        .update(first);
+
+    var result =
+        service.decide(
+            first.getTenantId(),
+            first.getId(),
+            new DecideActionCommand(ActionDecision.CONFIRM, first.getPayloadHash()));
+
+    assertThat(result).isSameAs(saved);
+    assertThat(result.getStatus()).isEqualTo(ActionStatus.APPROVED);
+  }
+
+  @Test
+  void start_whenActionIsApproved_shouldSaveExecutingAction() {
+    var action = action();
+    action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), clock.instant());
+    when(actionRepository.findById(action.getId())).thenReturn(Optional.of(action));
+
+    var result = service.start(action.getId());
+
+    assertThat(result.getStatus()).isEqualTo(ActionStatus.EXECUTING);
+    verify(actionRepository).update(action);
+  }
+
+  @Test
+  void start_whenActionIsAlreadyExecuting_shouldNotSaveAgain() {
+    var action = action();
+    action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), clock.instant());
+    action.startExecution(clock.instant());
+    when(actionRepository.findById(action.getId())).thenReturn(Optional.of(action));
+
+    var result = service.start(action.getId());
+
+    assertThat(result.getStatus()).isEqualTo(ActionStatus.EXECUTING);
+    verify(actionRepository, never()).update(action);
+  }
+
+  @Test
+  void succeed_whenActionIsExecuting_shouldSaveResult() {
+    var action = action();
+    action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), clock.instant());
+    action.startExecution(clock.instant());
+    when(actionRepository.findById(action.getId())).thenReturn(Optional.of(action));
+
+    var result = service.succeed(action.getId(), "event-123");
+
+    assertThat(result.getStatus()).isEqualTo(ActionStatus.SUCCEEDED);
+    assertThat(result.getResult().eventId()).isEqualTo("event-123");
+    verify(actionRepository).update(action);
+  }
+
+  @Test
+  void succeed_whenSameResultIsRepeated_shouldNotSaveAgain() {
+    var action = action();
+    action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), clock.instant());
+    action.startExecution(clock.instant());
+    action.succeed("event-123", clock.instant());
+    when(actionRepository.findById(action.getId())).thenReturn(Optional.of(action));
+
+    var result = service.succeed(action.getId(), "event-123");
+
+    assertThat(result.getStatus()).isEqualTo(ActionStatus.SUCCEEDED);
+    verify(actionRepository, never()).update(action);
+  }
+
+  @Test
+  void fail_whenActionIsExecuting_shouldSaveFailedAction() {
+    var action = action();
+    action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), clock.instant());
+    action.startExecution(clock.instant());
+    when(actionRepository.findById(action.getId())).thenReturn(Optional.of(action));
+
+    var result = service.fail(action.getId());
+
+    assertThat(result.getStatus()).isEqualTo(ActionStatus.FAILED);
+    verify(actionRepository).update(action);
+  }
+
+  @Test
+  void fail_whenActionIsAlreadyFailed_shouldNotSaveAgain() {
+    var action = action();
+    action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), clock.instant());
+    action.startExecution(clock.instant());
+    action.fail(clock.instant());
+    when(actionRepository.findById(action.getId())).thenReturn(Optional.of(action));
+
+    var result = service.fail(action.getId());
+
+    assertThat(result.getStatus()).isEqualTo(ActionStatus.FAILED);
+    verify(actionRepository, never()).update(action);
+  }
+
+  private Action action() {
+    return Action.create(
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        "request-123",
+        "calendar.create_event",
+        "fake-calendar",
+        Map.of("title", "Demo"),
+        "a".repeat(64),
+        clock.instant());
+  }
+
+  private Action sameAction(Action source) {
+    return Action.fromData(
+        source.getId(),
+        source.getVersion() + 1,
+        source.getTenantId(),
+        source.getActorId(),
+        source.getRequestKey(),
+        source.getKind(),
+        source.getConnector(),
+        source.getPayload(),
+        source.getPayloadHash(),
+        source.getStatus(),
+        source.getResult(),
+        source.getCreatedAt(),
+        source.getUpdatedAt());
   }
 }
