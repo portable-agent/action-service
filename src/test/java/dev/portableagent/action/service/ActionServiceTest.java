@@ -29,278 +29,267 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class ActionServiceTest {
-  @Mock ActionRepository actionRepository;
-  @Mock OutboxRepository outboxRepository;
-  @Mock PayloadHash payloadHash;
+    @Mock
+    ActionRepository actionRepository;
 
-  private final Clock clock = Clock.fixed(Instant.parse("2026-08-28T10:00:00Z"), ZoneOffset.UTC);
-  private ActionService service;
+    @Mock
+    OutboxRepository outboxRepository;
 
-  @BeforeEach
-  void setUp() {
-    service = new ActionService(actionRepository, outboxRepository, payloadHash, clock);
-  }
+    @Mock
+    PayloadHash payloadHash;
 
-  @Test
-  void create_whenRequestIsNew_shouldSaveActionAndOutbox() {
-    var tenantId = UUID.randomUUID();
-    var userId = UUID.randomUUID();
-    var request =
-        new CreateActionCommand(
-            "calendar.create_event", "fake-calendar", Map.of("title", "Demo"), "request-123");
-    when(actionRepository.findByRequestKey(tenantId, request.requestKey()))
-        .thenReturn(Optional.empty());
-    when(payloadHash.make(request.payload())).thenReturn("a".repeat(64));
-    when(actionRepository.saveIfMissing(any(Action.class))).thenReturn(true);
+    private final Clock clock = Clock.fixed(Instant.parse("2026-08-28T10:00:00Z"), ZoneOffset.UTC);
+    private ActionService service;
 
-    var result = service.create(tenantId, userId, request);
+    @BeforeEach
+    void setUp() {
+        service = new ActionService(actionRepository, outboxRepository, payloadHash, clock);
+    }
 
-    assertThat(result.getTenantId()).isEqualTo(tenantId);
-    assertThat(result.getPayloadHash()).isEqualTo("a".repeat(64));
-    verify(actionRepository).saveIfMissing(result);
-    verify(outboxRepository).save(any(OutboxItem.class));
-  }
+    @Test
+    void create_whenRequestIsNew_shouldSaveActionAndOutbox() {
+        var tenantId = UUID.randomUUID();
+        var userId = UUID.randomUUID();
+        var request = new CreateActionCommand(
+                "calendar.create_event", "fake-calendar", Map.of("title", "Demo"), "request-123");
+        when(actionRepository.findByRequestKey(tenantId, request.requestKey())).thenReturn(Optional.empty());
+        when(payloadHash.make(request.payload())).thenReturn("a".repeat(64));
+        when(actionRepository.saveIfMissing(any(Action.class))).thenReturn(true);
 
-  @Test
-  void create_whenAnotherRequestSavesFirst_shouldReturnSavedAction() {
-    var tenantId = UUID.randomUUID();
-    var oldAction =
-        Action.create(
-            tenantId,
-            UUID.randomUUID(),
-            "request-123",
-            "calendar.create_event",
-            "fake-calendar",
-            Map.of("title", "Demo"),
-            "a".repeat(64),
-            clock.instant());
-    var request =
-        new CreateActionCommand(
-            "calendar.create_event", "fake-calendar", Map.of("title", "Demo"), "request-123");
-    when(actionRepository.findByRequestKey(tenantId, request.requestKey()))
-        .thenReturn(Optional.empty(), Optional.of(oldAction));
-    when(payloadHash.make(request.payload())).thenReturn("a".repeat(64));
-    when(actionRepository.saveIfMissing(any(Action.class))).thenReturn(false);
+        var result = service.create(tenantId, userId, request);
 
-    assertThat(service.create(tenantId, UUID.randomUUID(), request)).isSameAs(oldAction);
-    verifyNoInteractions(outboxRepository);
-  }
+        assertThat(result.getTenantId()).isEqualTo(tenantId);
+        assertThat(result.getPayloadHash()).isEqualTo("a".repeat(64));
+        verify(actionRepository).saveIfMissing(result);
+        verify(outboxRepository).save(any(OutboxItem.class));
+    }
 
-  @Test
-  void create_whenRequestKeyExists_shouldReturnOldAction() {
-    var tenantId = UUID.randomUUID();
-    var oldAction =
-        Action.create(
-            tenantId,
-            UUID.randomUUID(),
-            "request-123",
-            "calendar.create_event",
-            "calendar",
-            Map.of("title", "Demo"),
-            "a".repeat(64),
-            clock.instant());
-    var request = new CreateActionCommand("ignored", "ignored", Map.of("x", "y"), "request-123");
-    when(actionRepository.findByRequestKey(tenantId, request.requestKey()))
-        .thenReturn(Optional.of(oldAction));
+    @Test
+    void create_whenAnotherRequestSavesFirst_shouldReturnSavedAction() {
+        var tenantId = UUID.randomUUID();
+        var oldAction = Action.create(
+                tenantId,
+                UUID.randomUUID(),
+                "request-123",
+                "calendar.create_event",
+                "fake-calendar",
+                Map.of("title", "Demo"),
+                "a".repeat(64),
+                clock.instant());
+        var request = new CreateActionCommand(
+                "calendar.create_event", "fake-calendar", Map.of("title", "Demo"), "request-123");
+        when(actionRepository.findByRequestKey(tenantId, request.requestKey()))
+                .thenReturn(Optional.empty(), Optional.of(oldAction));
+        when(payloadHash.make(request.payload())).thenReturn("a".repeat(64));
+        when(actionRepository.saveIfMissing(any(Action.class))).thenReturn(false);
 
-    assertThat(service.create(tenantId, UUID.randomUUID(), request)).isSameAs(oldAction);
-    verify(outboxRepository, never()).save(any(OutboxItem.class));
-  }
+        assertThat(service.create(tenantId, UUID.randomUUID(), request)).isSameAs(oldAction);
+        verifyNoInteractions(outboxRepository);
+    }
 
-  @Test
-  void create_whenKindIsNotCalendar_shouldRejectRequest() {
-    var tenantId = UUID.randomUUID();
-    var request =
-        new CreateActionCommand(
-            "task.create", "fake-calendar", Map.of("title", "Demo"), "request-123");
-    when(actionRepository.findByRequestKey(tenantId, request.requestKey()))
-        .thenReturn(Optional.empty());
+    @Test
+    void create_whenRequestKeyExists_shouldReturnOldAction() {
+        var tenantId = UUID.randomUUID();
+        var oldAction = Action.create(
+                tenantId,
+                UUID.randomUUID(),
+                "request-123",
+                "calendar.create_event",
+                "calendar",
+                Map.of("title", "Demo"),
+                "a".repeat(64),
+                clock.instant());
+        var request = new CreateActionCommand("ignored", "ignored", Map.of("x", "y"), "request-123");
+        when(actionRepository.findByRequestKey(tenantId, request.requestKey())).thenReturn(Optional.of(oldAction));
 
-    assertThatThrownBy(() -> service.create(tenantId, UUID.randomUUID(), request))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Only calendar.create_event is supported");
+        assertThat(service.create(tenantId, UUID.randomUUID(), request)).isSameAs(oldAction);
+        verify(outboxRepository, never()).save(any(OutboxItem.class));
+    }
 
-    verify(actionRepository, never()).saveIfMissing(any(Action.class));
-    verifyNoInteractions(outboxRepository, payloadHash);
-  }
+    @Test
+    void create_whenKindIsNotCalendar_shouldRejectRequest() {
+        var tenantId = UUID.randomUUID();
+        var request = new CreateActionCommand("task.create", "fake-calendar", Map.of("title", "Demo"), "request-123");
+        when(actionRepository.findByRequestKey(tenantId, request.requestKey())).thenReturn(Optional.empty());
 
-  @Test
-  void create_whenConnectorIsNotFakeCalendar_shouldRejectRequest() {
-    var tenantId = UUID.randomUUID();
-    var request =
-        new CreateActionCommand(
-            "calendar.create_event", "google-calendar", Map.of("title", "Demo"), "request-123");
-    when(actionRepository.findByRequestKey(tenantId, request.requestKey()))
-        .thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.create(tenantId, UUID.randomUUID(), request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Only calendar.create_event is supported");
 
-    assertThatThrownBy(() -> service.create(tenantId, UUID.randomUUID(), request))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Only fake-calendar is supported");
+        verify(actionRepository, never()).saveIfMissing(any(Action.class));
+        verifyNoInteractions(outboxRepository, payloadHash);
+    }
 
-    verify(actionRepository, never()).saveIfMissing(any(Action.class));
-    verifyNoInteractions(outboxRepository, payloadHash);
-  }
+    @Test
+    void create_whenConnectorIsNotFakeCalendar_shouldRejectRequest() {
+        var tenantId = UUID.randomUUID();
+        var request = new CreateActionCommand(
+                "calendar.create_event", "google-calendar", Map.of("title", "Demo"), "request-123");
+        when(actionRepository.findByRequestKey(tenantId, request.requestKey())).thenReturn(Optional.empty());
 
-  @Test
-  void decide_whenConfirmIsNew_shouldSaveApprovedAction() {
-    var action = action();
-    when(actionRepository.findById(action.getTenantId(), action.getId()))
-        .thenReturn(Optional.of(action));
+        assertThatThrownBy(() -> service.create(tenantId, UUID.randomUUID(), request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Only fake-calendar is supported");
 
-    var result =
-        service.decide(
-            action.getTenantId(),
-            action.getId(),
-            new DecideActionCommand(ActionDecision.CONFIRM, action.getPayloadHash()));
+        verify(actionRepository, never()).saveIfMissing(any(Action.class));
+        verifyNoInteractions(outboxRepository, payloadHash);
+    }
 
-    assertThat(result.getStatus()).isEqualTo(ActionStatus.APPROVED);
-    verify(actionRepository).update(action);
-  }
+    @Test
+    void decide_whenConfirmIsNew_shouldSaveApprovedAction() {
+        var action = action();
+        when(actionRepository.findById(action.getTenantId(), action.getId())).thenReturn(Optional.of(action));
 
-  @Test
-  void decide_whenConfirmIsRepeated_shouldNotSaveAgain() {
-    var action = action();
-    action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), clock.instant());
-    when(actionRepository.findById(action.getTenantId(), action.getId()))
-        .thenReturn(Optional.of(action));
+        var result = service.decide(
+                action.getTenantId(),
+                action.getId(),
+                new DecideActionCommand(ActionDecision.CONFIRM, action.getPayloadHash()));
 
-    var result =
-        service.decide(
-            action.getTenantId(),
-            action.getId(),
-            new DecideActionCommand(ActionDecision.CONFIRM, action.getPayloadHash()));
+        assertThat(result.getStatus()).isEqualTo(ActionStatus.APPROVED);
+        verify(actionRepository).update(action);
+    }
 
-    assertThat(result.getStatus()).isEqualTo(ActionStatus.APPROVED);
-    verify(actionRepository, never()).update(action);
-  }
+    @Test
+    void decide_whenConfirmIsRepeated_shouldNotSaveAgain() {
+        var action = action();
+        action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), clock.instant());
+        when(actionRepository.findById(action.getTenantId(), action.getId())).thenReturn(Optional.of(action));
 
-  @Test
-  void decide_whenSameConfirmWinsRace_shouldReturnSavedState() {
-    var first = action();
-    var saved = sameAction(first);
-    saved.applyDecision(ActionDecision.CONFIRM, saved.getPayloadHash(), clock.instant());
-    when(actionRepository.findById(first.getTenantId(), first.getId()))
-        .thenReturn(Optional.of(first), Optional.of(saved));
-    org.mockito.Mockito.doThrow(new ActionChanged(first.getId()))
-        .when(actionRepository)
-        .update(first);
+        var result = service.decide(
+                action.getTenantId(),
+                action.getId(),
+                new DecideActionCommand(ActionDecision.CONFIRM, action.getPayloadHash()));
 
-    var result =
-        service.decide(
-            first.getTenantId(),
-            first.getId(),
-            new DecideActionCommand(ActionDecision.CONFIRM, first.getPayloadHash()));
+        assertThat(result.getStatus()).isEqualTo(ActionStatus.APPROVED);
+        verify(actionRepository, never()).update(action);
+    }
 
-    assertThat(result).isSameAs(saved);
-    assertThat(result.getStatus()).isEqualTo(ActionStatus.APPROVED);
-  }
+    @Test
+    void decide_whenSameConfirmWinsRace_shouldReturnSavedState() {
+        var first = action();
+        var saved = sameAction(first);
+        saved.applyDecision(ActionDecision.CONFIRM, saved.getPayloadHash(), clock.instant());
+        when(actionRepository.findById(first.getTenantId(), first.getId()))
+                .thenReturn(Optional.of(first), Optional.of(saved));
+        org.mockito.Mockito.doThrow(new ActionChanged(first.getId()))
+                .when(actionRepository)
+                .update(first);
 
-  @Test
-  void start_whenActionIsApproved_shouldSaveExecutingAction() {
-    var action = action();
-    action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), clock.instant());
-    when(actionRepository.findById(action.getId())).thenReturn(Optional.of(action));
+        var result = service.decide(
+                first.getTenantId(),
+                first.getId(),
+                new DecideActionCommand(ActionDecision.CONFIRM, first.getPayloadHash()));
 
-    var result = service.start(action.getId());
+        assertThat(result).isSameAs(saved);
+        assertThat(result.getStatus()).isEqualTo(ActionStatus.APPROVED);
+    }
 
-    assertThat(result.getStatus()).isEqualTo(ActionStatus.EXECUTING);
-    verify(actionRepository).update(action);
-  }
+    @Test
+    void start_whenActionIsApproved_shouldSaveExecutingAction() {
+        var action = action();
+        action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), clock.instant());
+        when(actionRepository.findById(action.getId())).thenReturn(Optional.of(action));
 
-  @Test
-  void start_whenActionIsAlreadyExecuting_shouldNotSaveAgain() {
-    var action = action();
-    action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), clock.instant());
-    action.startExecution(clock.instant());
-    when(actionRepository.findById(action.getId())).thenReturn(Optional.of(action));
+        var result = service.start(action.getId());
 
-    var result = service.start(action.getId());
+        assertThat(result.getStatus()).isEqualTo(ActionStatus.EXECUTING);
+        verify(actionRepository).update(action);
+    }
 
-    assertThat(result.getStatus()).isEqualTo(ActionStatus.EXECUTING);
-    verify(actionRepository, never()).update(action);
-  }
+    @Test
+    void start_whenActionIsAlreadyExecuting_shouldNotSaveAgain() {
+        var action = action();
+        action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), clock.instant());
+        action.startExecution(clock.instant());
+        when(actionRepository.findById(action.getId())).thenReturn(Optional.of(action));
 
-  @Test
-  void succeed_whenActionIsExecuting_shouldSaveResult() {
-    var action = action();
-    action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), clock.instant());
-    action.startExecution(clock.instant());
-    when(actionRepository.findById(action.getId())).thenReturn(Optional.of(action));
+        var result = service.start(action.getId());
 
-    var result = service.succeed(action.getId(), "event-123");
+        assertThat(result.getStatus()).isEqualTo(ActionStatus.EXECUTING);
+        verify(actionRepository, never()).update(action);
+    }
 
-    assertThat(result.getStatus()).isEqualTo(ActionStatus.SUCCEEDED);
-    assertThat(result.getResult().eventId()).isEqualTo("event-123");
-    verify(actionRepository).update(action);
-  }
+    @Test
+    void succeed_whenActionIsExecuting_shouldSaveResult() {
+        var action = action();
+        action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), clock.instant());
+        action.startExecution(clock.instant());
+        when(actionRepository.findById(action.getId())).thenReturn(Optional.of(action));
 
-  @Test
-  void succeed_whenSameResultIsRepeated_shouldNotSaveAgain() {
-    var action = action();
-    action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), clock.instant());
-    action.startExecution(clock.instant());
-    action.succeed("event-123", clock.instant());
-    when(actionRepository.findById(action.getId())).thenReturn(Optional.of(action));
+        var result = service.succeed(action.getId(), "event-123");
 
-    var result = service.succeed(action.getId(), "event-123");
+        assertThat(result.getStatus()).isEqualTo(ActionStatus.SUCCEEDED);
+        assertThat(result.getResult().eventId()).isEqualTo("event-123");
+        verify(actionRepository).update(action);
+    }
 
-    assertThat(result.getStatus()).isEqualTo(ActionStatus.SUCCEEDED);
-    verify(actionRepository, never()).update(action);
-  }
+    @Test
+    void succeed_whenSameResultIsRepeated_shouldNotSaveAgain() {
+        var action = action();
+        action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), clock.instant());
+        action.startExecution(clock.instant());
+        action.succeed("event-123", clock.instant());
+        when(actionRepository.findById(action.getId())).thenReturn(Optional.of(action));
 
-  @Test
-  void fail_whenActionIsExecuting_shouldSaveFailedAction() {
-    var action = action();
-    action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), clock.instant());
-    action.startExecution(clock.instant());
-    when(actionRepository.findById(action.getId())).thenReturn(Optional.of(action));
+        var result = service.succeed(action.getId(), "event-123");
 
-    var result = service.fail(action.getId());
+        assertThat(result.getStatus()).isEqualTo(ActionStatus.SUCCEEDED);
+        verify(actionRepository, never()).update(action);
+    }
 
-    assertThat(result.getStatus()).isEqualTo(ActionStatus.FAILED);
-    verify(actionRepository).update(action);
-  }
+    @Test
+    void fail_whenActionIsExecuting_shouldSaveFailedAction() {
+        var action = action();
+        action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), clock.instant());
+        action.startExecution(clock.instant());
+        when(actionRepository.findById(action.getId())).thenReturn(Optional.of(action));
 
-  @Test
-  void fail_whenActionIsAlreadyFailed_shouldNotSaveAgain() {
-    var action = action();
-    action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), clock.instant());
-    action.startExecution(clock.instant());
-    action.fail(clock.instant());
-    when(actionRepository.findById(action.getId())).thenReturn(Optional.of(action));
+        var result = service.fail(action.getId());
 
-    var result = service.fail(action.getId());
+        assertThat(result.getStatus()).isEqualTo(ActionStatus.FAILED);
+        verify(actionRepository).update(action);
+    }
 
-    assertThat(result.getStatus()).isEqualTo(ActionStatus.FAILED);
-    verify(actionRepository, never()).update(action);
-  }
+    @Test
+    void fail_whenActionIsAlreadyFailed_shouldNotSaveAgain() {
+        var action = action();
+        action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), clock.instant());
+        action.startExecution(clock.instant());
+        action.fail(clock.instant());
+        when(actionRepository.findById(action.getId())).thenReturn(Optional.of(action));
 
-  private Action action() {
-    return Action.create(
-        UUID.randomUUID(),
-        UUID.randomUUID(),
-        "request-123",
-        "calendar.create_event",
-        "fake-calendar",
-        Map.of("title", "Demo"),
-        "a".repeat(64),
-        clock.instant());
-  }
+        var result = service.fail(action.getId());
 
-  private Action sameAction(Action source) {
-    return Action.fromData(
-        source.getId(),
-        source.getVersion() + 1,
-        source.getTenantId(),
-        source.getActorId(),
-        source.getRequestKey(),
-        source.getKind(),
-        source.getConnector(),
-        source.getPayload(),
-        source.getPayloadHash(),
-        source.getStatus(),
-        source.getResult(),
-        source.getCreatedAt(),
-        source.getUpdatedAt());
-  }
+        assertThat(result.getStatus()).isEqualTo(ActionStatus.FAILED);
+        verify(actionRepository, never()).update(action);
+    }
+
+    private Action action() {
+        return Action.create(
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                "request-123",
+                "calendar.create_event",
+                "fake-calendar",
+                Map.of("title", "Demo"),
+                "a".repeat(64),
+                clock.instant());
+    }
+
+    private Action sameAction(Action source) {
+        return Action.fromData(
+                source.getId(),
+                source.getVersion() + 1,
+                source.getTenantId(),
+                source.getActorId(),
+                source.getRequestKey(),
+                source.getKind(),
+                source.getConnector(),
+                source.getPayload(),
+                source.getPayloadHash(),
+                source.getStatus(),
+                source.getResult(),
+                source.getCreatedAt(),
+                source.getUpdatedAt());
+    }
 }

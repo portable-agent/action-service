@@ -9,6 +9,7 @@
 
 Java 25, Spring Boot 4.1, Spring MVC, jOOQ, PostgreSQL, Flyway, Temporal Java SDK,
 OAuth2 Resource Server, Micrometer и Testcontainers. JPA и Hibernate не используются.
+Java-код форматируется Palantir Java Format с отступом в четыре пробела, без символов tab.
 
 ## Запуск
 

@@ -6,8 +6,8 @@ import dev.portableagent.action.api.ActionsApi;
 import org.junit.jupiter.api.Test;
 
 class ActionControllerContractTest {
-  @Test
-  void controller_shouldImplementGeneratedContract() {
-    assertThat(ActionsApi.class).isAssignableFrom(ActionController.class);
-  }
+    @Test
+    void controller_shouldImplementGeneratedContract() {
+        assertThat(ActionsApi.class).isAssignableFrom(ActionController.class);
+    }
 }

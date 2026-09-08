@@ -23,6 +23,7 @@
 
 Используй английские слова уровня A2–B1: `create`, `get`, `save`, `send`, `find`, `status`, `error`.
 Если нужен редкий технический термин (`outbox`, `workflow`, `idempotency`), объясни его в docs.
+Java-код форматируется Palantir Java Format: четыре пробела, символы tab запрещены.
 
 ## Рабочий цикл
 
