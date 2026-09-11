@@ -27,3 +27,9 @@ temporal:
   target: ${TEMPORAL_TARGET:localhost:7233}
   namespace: ${TEMPORAL_NAMESPACE:default}
   task-queue: ${TEMPORAL_TASK_QUEUE:action-service}
+
+mcp:
+  gateway:
+    enabled: ${MCP_GATEWAY_ENABLED:false}
+    connect-timeout: ${MCP_GATEWAY_CONNECT_TIMEOUT:3s}
+    read-timeout: ${MCP_GATEWAY_READ_TIMEOUT:10s}

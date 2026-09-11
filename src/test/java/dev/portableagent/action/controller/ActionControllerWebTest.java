@@ -15,6 +15,7 @@ import dev.portableagent.action.model.Action;
 import dev.portableagent.action.model.ActionDecision;
 import dev.portableagent.action.service.ActionService;
 import dev.portableagent.action.service.CreateActionCommand;
+import dev.portableagent.action.service.DecideActionCommand;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
@@ -130,5 +131,37 @@ class ActionControllerWebTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("SUCCEEDED"))
                 .andExpect(jsonPath("$.result.eventId").value("event-123"));
+    }
+
+    @Test
+    void decideAction_whenRequestIsValid_shouldSignalWorkflow() throws Exception {
+        var tenantId = UUID.randomUUID();
+        var userId = UUID.randomUUID();
+        var now = Instant.parse("2026-09-01T10:00:00Z");
+        var action = Action.create(
+                tenantId,
+                userId,
+                "request-decision",
+                "calendar.create_event",
+                "fake-calendar",
+                Map.of("title", "Demo"),
+                "a".repeat(64),
+                now);
+        action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), now.plusSeconds(1));
+        when(actionService.decide(eq(tenantId), eq(action.getId()), any(DecideActionCommand.class)))
+                .thenReturn(action);
+
+        mockMvc.perform(post("/api/v1/actions/{actionId}/decisions", action.getId())
+                        .with(jwt().jwt(token ->
+                                token.subject(userId.toString()).claim("tenant_id", tenantId.toString())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                    {
+                      "decision": "CONFIRM",
+                      "payloadHash": "%s"
+                    }
+                    """.formatted(action.getPayloadHash())))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("APPROVED"));
     }
 }
