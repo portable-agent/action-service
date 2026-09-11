@@ -18,10 +18,9 @@ import org.springframework.web.client.RestClient;
 @EnableConfigurationProperties(McpProperties.class)
 public class McpConfig {
     @Bean
-    McpToken mcpToken(RestClient.Builder builder, McpProperties properties, Clock clock) {
-        var restClient = client(builder, properties)
-                .baseUrl(properties.tokenUrl().toString())
-                .build();
+    McpToken mcpToken(McpProperties properties, Clock clock) {
+        var restClient =
+                client(properties).baseUrl(properties.tokenUrl().toString()).build();
         return new OidcMcpToken(
                 restClient,
                 properties.clientId(),
@@ -32,18 +31,17 @@ public class McpConfig {
     }
 
     @Bean
-    McpClient mcpClient(RestClient.Builder builder, McpProperties properties, McpToken token) {
-        var restClient =
-                client(builder, properties).baseUrl(properties.url().toString()).build();
+    McpClient mcpClient(McpProperties properties, McpToken token) {
+        var restClient = client(properties).baseUrl(properties.url().toString()).build();
         return new RestMcpClient(restClient, token);
     }
 
-    private RestClient.Builder client(RestClient.Builder builder, McpProperties properties) {
+    private RestClient.Builder client(McpProperties properties) {
         var httpClient = HttpClient.newBuilder()
                 .connectTimeout(properties.connectTimeout())
                 .build();
         var requestFactory = new JdkClientHttpRequestFactory(httpClient);
         requestFactory.setReadTimeout(properties.readTimeout());
-        return builder.clone().requestFactory(requestFactory);
+        return RestClient.builder().requestFactory(requestFactory);
     }
 }
