@@ -41,6 +41,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testImplementation("org.springframework.boot:spring-boot-starter-security-test")
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
+    testImplementation("io.temporal:temporal-testing:1.38.0")
     testImplementation("org.testcontainers:testcontainers-junit-jupiter")
     testImplementation("org.testcontainers:testcontainers-postgresql")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
