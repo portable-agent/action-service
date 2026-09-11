@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import dev.portableagent.action.client.CalendarRequestMapper;
 import dev.portableagent.action.client.McpCallFailed;
 import dev.portableagent.action.client.McpClient;
 import dev.portableagent.action.client.McpResult;
@@ -34,7 +35,7 @@ class ActionActivityImplTest {
 
     @BeforeEach
     void setUp() {
-        activity = new ActionActivityImpl(actionService, mcpClient);
+        activity = new ActionActivityImpl(actionService, mcpClient, new CalendarRequestMapper());
     }
 
     @Test
