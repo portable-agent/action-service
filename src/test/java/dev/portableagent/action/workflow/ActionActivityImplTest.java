@@ -93,9 +93,9 @@ class ActionActivityImplTest {
                 "fake-calendar",
                 Map.of(
                         "title", "Demo",
-                        "start_at", "2026-09-11T10:00:00+03:00",
-                        "end_at", "2026-09-11T10:30:00+03:00",
-                        "time_zone", "Europe/Moscow"),
+                        "startAt", "2026-09-11T10:00:00+03:00",
+                        "endAt", "2026-09-11T10:30:00+03:00",
+                        "timeZone", "Europe/Moscow"),
                 "a".repeat(64),
                 Instant.parse("2026-09-11T06:00:00Z"));
         action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), Instant.parse("2026-09-11T06:01:00Z"));
@@ -103,7 +103,12 @@ class ActionActivityImplTest {
     }
 
     private McpCallRequest requestFor(Action action) {
-        return new McpCallRequest(
-                action.getId(), action.getConnector(), "create_event", action.getPayload(), action.getRequestKey());
+        var input = Map.<String, Object>of(
+                "request_key", action.getRequestKey(),
+                "title", "Demo",
+                "start_at", "2026-09-11T10:00:00+03:00",
+                "end_at", "2026-09-11T10:30:00+03:00",
+                "time_zone", "Europe/Moscow");
+        return new McpCallRequest(action.getId(), action.getConnector(), "create_event", input, action.getRequestKey());
     }
 }
