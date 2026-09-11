@@ -7,12 +7,10 @@ import dev.portableagent.action.client.McpToken;
 import java.time.Clock;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import org.springframework.web.client.RestClient;
 
 class McpConfigTest {
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withUserConfiguration(McpConfig.class)
-            .withBean(RestClient.Builder.class, RestClient::builder)
             .withBean(Clock.class, Clock::systemUTC);
 
     @Test
