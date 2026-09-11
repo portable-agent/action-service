@@ -6,4 +6,6 @@ import java.util.UUID;
 @ActivityInterface
 public interface ActionActivity {
     void run(UUID actionId, String payloadHash);
+
+    void fail(UUID actionId);
 }

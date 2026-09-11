@@ -13,6 +13,7 @@ import dev.portableagent.action.model.Action;
 import dev.portableagent.action.model.ActionDecision;
 import dev.portableagent.action.model.ActionStatus;
 import dev.portableagent.action.model.OutboxItem;
+import dev.portableagent.action.model.OutboxType;
 import dev.portableagent.action.repository.ActionRepository;
 import dev.portableagent.action.repository.OutboxRepository;
 import java.time.Clock;
@@ -24,6 +25,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -61,7 +63,9 @@ class ActionServiceTest {
         assertThat(result.getTenantId()).isEqualTo(tenantId);
         assertThat(result.getPayloadHash()).isEqualTo("a".repeat(64));
         verify(actionRepository).saveIfMissing(result);
-        verify(outboxRepository).save(any(OutboxItem.class));
+        var outbox = ArgumentCaptor.forClass(OutboxItem.class);
+        verify(outboxRepository).save(outbox.capture());
+        assertThat(outbox.getValue().type()).isEqualTo(OutboxType.START);
     }
 
     @Test
@@ -147,6 +151,11 @@ class ActionServiceTest {
 
         assertThat(result.getStatus()).isEqualTo(ActionStatus.APPROVED);
         verify(actionRepository).update(action);
+        var outbox = ArgumentCaptor.forClass(OutboxItem.class);
+        verify(outboxRepository).save(outbox.capture());
+        assertThat(outbox.getValue().type()).isEqualTo(OutboxType.DECISION);
+        assertThat(outbox.getValue().decision()).isEqualTo("CONFIRM");
+        assertThat(outbox.getValue().payloadHash()).isEqualTo(action.getPayloadHash());
     }
 
     @Test
@@ -162,6 +171,7 @@ class ActionServiceTest {
 
         assertThat(result.getStatus()).isEqualTo(ActionStatus.APPROVED);
         verify(actionRepository, never()).update(action);
+        verify(outboxRepository).save(any(OutboxItem.class));
     }
 
     @Test
@@ -190,7 +200,7 @@ class ActionServiceTest {
         action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), clock.instant());
         when(actionRepository.findById(action.getId())).thenReturn(Optional.of(action));
 
-        var result = service.start(action.getId());
+        var result = service.start(action.getId(), action.getPayloadHash());
 
         assertThat(result.getStatus()).isEqualTo(ActionStatus.EXECUTING);
         verify(actionRepository).update(action);
@@ -203,9 +213,36 @@ class ActionServiceTest {
         action.startExecution(clock.instant());
         when(actionRepository.findById(action.getId())).thenReturn(Optional.of(action));
 
-        var result = service.start(action.getId());
+        var result = service.start(action.getId(), action.getPayloadHash());
 
         assertThat(result.getStatus()).isEqualTo(ActionStatus.EXECUTING);
+        verify(actionRepository, never()).update(action);
+    }
+
+    @Test
+    void start_whenPayloadHashChanged_shouldRejectAction() {
+        var action = action();
+        action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), clock.instant());
+        when(actionRepository.findById(action.getId())).thenReturn(Optional.of(action));
+
+        assertThatThrownBy(() -> service.start(action.getId(), "b".repeat(64)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Payload hash does not match");
+
+        verify(actionRepository, never()).update(action);
+    }
+
+    @Test
+    void start_whenActionAlreadyFinished_shouldReturnWithoutChange() {
+        var action = action();
+        action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), clock.instant());
+        action.startExecution(clock.instant());
+        action.succeed("event-123", clock.instant());
+        when(actionRepository.findById(action.getId())).thenReturn(Optional.of(action));
+
+        var result = service.start(action.getId(), action.getPayloadHash());
+
+        assertThat(result.getStatus()).isEqualTo(ActionStatus.SUCCEEDED);
         verify(actionRepository, never()).update(action);
     }
 

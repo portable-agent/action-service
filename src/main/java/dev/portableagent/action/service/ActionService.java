@@ -3,6 +3,7 @@ package dev.portableagent.action.service;
 import dev.portableagent.action.exception.ActionChanged;
 import dev.portableagent.action.exception.ActionNotFound;
 import dev.portableagent.action.model.Action;
+import dev.portableagent.action.model.ActionStatus;
 import dev.portableagent.action.model.OutboxItem;
 import dev.portableagent.action.repository.ActionRepository;
 import dev.portableagent.action.repository.OutboxRepository;
@@ -59,7 +60,7 @@ public class ActionService {
                     .findByRequestKey(tenantId, request.requestKey())
                     .orElseThrow(() -> new IllegalStateException("Saved action was not found"));
         }
-        outboxRepository.save(OutboxItem.create(action.getId(), now));
+        outboxRepository.save(OutboxItem.start(action.getId(), now));
         return action;
     }
 
@@ -79,14 +80,25 @@ public class ActionService {
 
     @Transactional
     public Action decide(UUID tenantId, UUID actionId, DecideActionCommand request) {
-        return change(
+        var action = change(
                 () -> get(tenantId, actionId),
-                action -> action.applyDecision(request.decision(), request.payloadHash(), clock.instant()));
+                current -> current.applyDecision(request.decision(), request.payloadHash(), clock.instant()));
+        outboxRepository.save(
+                OutboxItem.decision(actionId, request.decision().name(), request.payloadHash(), clock.instant()));
+        return action;
     }
 
     @Transactional
-    public Action start(UUID actionId) {
-        return change(() -> getForWork(actionId), action -> action.startExecution(clock.instant()));
+    public Action start(UUID actionId, String checkedHash) {
+        return change(() -> getForWork(actionId), action -> {
+            if (!action.getPayloadHash().equals(checkedHash)) {
+                throw new IllegalArgumentException("Payload hash does not match");
+            }
+            if (action.getStatus() == ActionStatus.SUCCEEDED || action.getStatus() == ActionStatus.FAILED) {
+                return false;
+            }
+            return action.startExecution(clock.instant());
+        });
     }
 
     @Transactional

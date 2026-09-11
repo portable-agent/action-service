@@ -7,6 +7,8 @@ import dev.portableagent.action.exception.ActionChanged;
 import dev.portableagent.action.model.Action;
 import dev.portableagent.action.model.ActionDecision;
 import dev.portableagent.action.model.ActionStatus;
+import dev.portableagent.action.model.OutboxItem;
+import dev.portableagent.action.model.OutboxType;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -144,6 +146,28 @@ class ActionRepositoryTest {
         }
 
         assertThat(repository(db).findByRequestKey(tenantId, "same-request")).isPresent();
+    }
+
+    @Test
+    void outbox_whenStartIsRepeated_shouldKeepOneStartAndOneDecision() {
+        var actionRepository = repository(db);
+        var outboxRepository = new OutboxRepository(db);
+        var action = action(UUID.randomUUID(), "outbox-events");
+        var now = Instant.parse("2026-08-28T10:00:00Z");
+        assertThat(actionRepository.saveIfMissing(action)).isTrue();
+
+        outboxRepository.save(OutboxItem.start(action.getId(), now));
+        outboxRepository.save(OutboxItem.start(action.getId(), now.plusSeconds(1)));
+        outboxRepository.save(
+                OutboxItem.decision(action.getId(), "CONFIRM", action.getPayloadHash(), now.plusSeconds(2)));
+
+        var events = outboxRepository.findPending(100, now.plusSeconds(3)).stream()
+                .filter(item -> item.actionId().equals(action.getId()))
+                .toList();
+        assertThat(events).hasSize(2);
+        assertThat(events).extracting(OutboxItem::type).containsExactly(OutboxType.START, OutboxType.DECISION);
+        assertThat(events.get(1).decision()).isEqualTo("CONFIRM");
+        assertThat(events.get(1).payloadHash()).isEqualTo(action.getPayloadHash());
     }
 
     private boolean saveAfterStart(Action action, CountDownLatch start) throws Exception {

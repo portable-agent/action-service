@@ -3,8 +3,9 @@
 ## Ответственность
 
 Сервис хранит состояние, payload и результат действия, защищает повторные запросы ключом `requestKey`, пишет outbox в
-той же транзакции и запускает workflow Temporal. Сервис пока является каркасом: не придумывай
-правила оплаты, календаря, Jira или подтверждения без решения команды.
+той же транзакции и запускает workflow Temporal. Worker ждёт подтверждение, сверяет сохранённый
+`payloadHash` и вызывает MCP Gateway. Не придумывай правила оплаты, Jira или настоящего календаря без
+решения команды.
 
 ## Границы
 
@@ -16,6 +17,9 @@
 - `controller` переводит generated API models в простые команды service-слоя.
 - `scheduler` отправляет outbox.
 - `workflow` содержит связь с Temporal.
+- `client` содержит только вызов MCP Gateway и получение service token по OAuth2 client credentials.
+- Один worker обслуживает только `MCP_GATEWAY_TENANT_ID`; не убирай эту fail-closed проверку без
+  спроектированного multi-tenant token exchange.
 - Схема БД меняется только Flyway-миграциями.
 - JPA и Hibernate запрещены.
 

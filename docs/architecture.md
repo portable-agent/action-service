@@ -5,9 +5,11 @@ controller -> service -> repository -> PostgreSQL
                   |          ^
                   v          |
                 model     jOOQ code
-                  |
-                  v
-              scheduler -> workflow -> Temporal
+
+controller -> ActionService -> PostgreSQL + outbox
+scheduler  -> TemporalSender -> Temporal workflow
+Temporal worker -> ActionActivity -> ActionService
+                               \-> McpClient -> MCP Gateway -> Calendar MCP
 ```
 
 ## Папки
@@ -20,6 +22,7 @@ controller -> service -> repository -> PostgreSQL
 - `model` — простые Java-классы предметной области.
 - `scheduler` — чтение и отправка outbox.
 - `workflow` — клиент Temporal.
+- `client` — HTTP-вызов MCP Gateway и OAuth2 service token.
 - `config` и `exception` — настройка и единый формат ошибок.
 
 Flyway SQL — единственный источник схемы. Gradle создаёт Java-классы jOOQ из тех же SQL-файлов до
@@ -55,8 +58,31 @@ AWAITING_APPROVAL -> APPROVED -> EXECUTING -> SUCCEEDED
 конкурентном изменении сервис перечитывает запись и проверяет переход снова. Успешное действие принимает
 повтор только с тем же `eventId`.
 
+## Выполнение через Temporal
+
+Outbox запускает workflow с постоянным id `action-{actionId}`. Workflow ждёт сигнал решения. Для
+`CANCEL` он завершается без activity. Для `CONFIRM` он передаёт `actionId` и подтверждённый
+`payloadHash` в activity.
+
+`ActionService` сохраняет смену статуса и событие решения в одной транзакции. Scheduler читает это
+событие и вызывает Temporal `signalWithStart`. Поэтому сбой процесса между PostgreSQL и Temporal не
+теряет решение: неотправленная запись остаётся в outbox. Для одного действия хранится не больше одного
+события каждого типа, поэтому повтор того же решения безопасен. Реплики scheduler забирают строки через
+`FOR UPDATE SKIP LOCKED`; после ошибки запись получает растущую паузу до следующей попытки и не блокирует
+новые события.
+
+Activity повторно сверяет hash, переводит действие в `EXECUTING`, вызывает только настроенный адрес
+MCP Gateway и сохраняет `eventId`. Temporal делает не больше трёх попыток. Если все они завершились
+ошибкой, отдельная activity переводит действие в `FAILED`. HTTP-ответы и детали ошибок внешнего
+коннектора не сохраняются и не отдаются пользователю.
+
+Gateway и OAuth2 включаются только через `MCP_GATEWAY_ENABLED=true`. Все адреса, client id, secret,
+scopes и tenant приходят из окружения. Для первого среза один worker работает только с одним tenant и
+проверяет его до получения токена. Вызовы token endpoint и Gateway имеют явные connect/read timeouts.
+По умолчанию worker не создаётся, поэтому API можно разрабатывать без запущенных Gateway и Keycloak.
+
 ## Пока не решено
 
 - как выполняются платежи, встречи и задачи;
-- политика повторов и лимиты;
-- полный жизненный цикл Temporal workflow.
+- разные правила повторов для временных и постоянных ошибок;
+- безопасный multi-tenant token exchange для production Keycloak.
