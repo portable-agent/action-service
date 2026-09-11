@@ -15,6 +15,8 @@
 - `model` не зависит от Spring, jOOQ и HTTP.
 - `api` создаётся OpenAPI Generator в `build/`; generated-файлы не меняются вручную.
 - `controller` переводит generated API models в простые команды service-слоя.
+- Сетевые DTO MCP Gateway тоже generated из `src/main/openapi/mcp-gateway-api.yaml`; не дублируй их
+  ручными Java-классами.
 - `scheduler` отправляет outbox.
 - `workflow` содержит связь с Temporal.
 - `client` содержит только вызов MCP Gateway и получение service token по OAuth2 client credentials.

@@ -1,6 +1,7 @@
 package dev.portableagent.action.client;
 
-import java.util.Map;
+import dev.portableagent.action.mcp.api.model.McpCallRequest;
+import dev.portableagent.action.mcp.api.model.McpCallResponse;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
@@ -14,42 +15,32 @@ public class RestMcpClient implements McpClient {
     }
 
     @Override
-    public McpResult call(McpRequest request) {
-        McpResponse response;
+    public McpResult call(java.util.UUID tenantId, McpCallRequest request) {
+        McpCallResponse response;
         try {
             response = restClient
                     .post()
                     .uri("/api/v1/calls")
-                    .headers(headers -> headers.setBearerAuth(token.get(request.tenantId())))
-                    .body(GatewayRequest.from(request))
+                    .headers(headers -> headers.setBearerAuth(token.get(tenantId)))
+                    .body(request)
                     .retrieve()
-                    .body(McpResponse.class);
+                    .body(McpCallResponse.class);
         } catch (RestClientException error) {
             throw new McpCallFailed("Gateway call failed");
         }
 
-        var eventId = response == null ? null : response.eventId();
+        var eventId = eventId(response);
         if (eventId == null || eventId.isBlank()) {
             throw new McpCallFailed("Gateway response is invalid");
         }
         return new McpResult(eventId);
     }
 
-    record GatewayRequest(
-            java.util.UUID actionId, String connector, String tool, Map<String, Object> input, String requestKey) {
-        static GatewayRequest from(McpRequest request) {
-            return new GatewayRequest(
-                    request.actionId(), request.connector(), request.tool(), request.input(), request.requestKey());
+    private String eventId(McpCallResponse response) {
+        if (response == null || response.getData() == null) {
+            return null;
         }
-    }
-
-    record McpResponse(Map<String, Object> data) {
-        String eventId() {
-            if (data == null) {
-                return null;
-            }
-            var value = data.get("eventId");
-            return value instanceof String text ? text : null;
-        }
+        var value = response.getData().get("eventId");
+        return value instanceof String text ? text : null;
     }
 }

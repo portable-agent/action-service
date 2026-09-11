@@ -48,8 +48,9 @@ MCP_GATEWAY_READ_TIMEOUT=10s
 Код jOOQ создаётся автоматически из `src/main/resources/db/migration/*.sql`. Сгенерированный код
 находится в `build/` и не хранится в Git.
 
-HTTP-интерфейс и API-модели создаёт OpenAPI Generator из закреплённого снимка
-`src/main/openapi/action-api.yaml`. Снимок обновляется только из GitHub Release репозитория contracts:
+HTTP-интерфейс Action API и сетевые модели MCP Gateway создаёт OpenAPI Generator из двух закреплённых
+снимков в `src/main/openapi`. Оба снимка обновляются вместе только из одного GitHub Release репозитория
+contracts:
 
 ```powershell
 pwsh ./scripts/update-contract.ps1 -Version 1.2.0
@@ -65,7 +66,7 @@ pwsh ./scripts/update-contract.ps1 -Version 1.2.0
 `start`, `succeed` и `fail` также идемпотентны: повтор не меняет версию и время действия. Другой
 `eventId` после успеха отклоняется как конфликт.
 
-Outbound-вызов MCP Gateway соответствует bundle `portable-agent/contracts` версии `1.2.0`.
+Action API и outbound-вызов MCP Gateway соответствуют bundle `portable-agent/contracts` версии `1.2.0`.
 
 ## Где читать дальше
 

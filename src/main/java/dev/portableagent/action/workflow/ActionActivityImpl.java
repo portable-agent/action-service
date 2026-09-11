@@ -1,7 +1,7 @@
 package dev.portableagent.action.workflow;
 
 import dev.portableagent.action.client.McpClient;
-import dev.portableagent.action.client.McpRequest;
+import dev.portableagent.action.mcp.api.model.McpCallRequest;
 import dev.portableagent.action.model.ActionStatus;
 import dev.portableagent.action.service.ActionService;
 import java.util.UUID;
@@ -32,14 +32,9 @@ public class ActionActivityImpl implements ActionActivity {
             throw new IllegalArgumentException("Action kind is not supported");
         }
 
-        var request = new McpRequest(
-                action.getId(),
-                action.getTenantId(),
-                action.getConnector(),
-                CREATE_EVENT,
-                action.getPayload(),
-                action.getRequestKey());
-        var result = mcpClient.call(request);
+        var request = new McpCallRequest(
+                action.getId(), action.getConnector(), CREATE_EVENT, action.getPayload(), action.getRequestKey());
+        var result = mcpClient.call(action.getTenantId(), request);
         actionService.succeed(actionId, result.eventId());
     }
 

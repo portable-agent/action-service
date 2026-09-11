@@ -13,6 +13,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withBadGateway;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+import dev.portableagent.action.mcp.api.model.McpCallRequest;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,8 +58,10 @@ class RestMcpClientTest {
                         {"data":{"eventId":"event-123"}}
                         """, MediaType.APPLICATION_JSON));
 
-        var result = client.call(new McpRequest(
-                actionId, TENANT_ID, "fake-calendar", "create_event", Map.of("title", "Demo"), "calendar-request-123"));
+        var result = client.call(
+                TENANT_ID,
+                new McpCallRequest(
+                        actionId, "fake-calendar", "create_event", Map.of("title", "Demo"), "calendar-request-123"));
 
         assertThat(result.eventId()).isEqualTo("event-123");
         verify(token).get(TENANT_ID);
@@ -70,13 +73,14 @@ class RestMcpClientTest {
         server.expect(requestTo("http://mcp-gateway:8080/api/v1/calls"))
                 .andRespond(withBadGateway().body("private connector error"));
 
-        assertThatThrownBy(() -> client.call(new McpRequest(
-                        UUID.randomUUID(),
+        assertThatThrownBy(() -> client.call(
                         TENANT_ID,
-                        "fake-calendar",
-                        "create_event",
-                        Map.of("title", "Demo"),
-                        "calendar-request-123")))
+                        new McpCallRequest(
+                                UUID.randomUUID(),
+                                "fake-calendar",
+                                "create_event",
+                                Map.of("title", "Demo"),
+                                "calendar-request-123")))
                 .isInstanceOf(McpCallFailed.class)
                 .hasMessage("Gateway call failed")
                 .hasNoCause()
@@ -89,13 +93,14 @@ class RestMcpClientTest {
         server.expect(requestTo("http://mcp-gateway:8080/api/v1/calls"))
                 .andRespond(withSuccess("{\"data\":{}}", MediaType.APPLICATION_JSON));
 
-        assertThatThrownBy(() -> client.call(new McpRequest(
-                        UUID.randomUUID(),
+        assertThatThrownBy(() -> client.call(
                         TENANT_ID,
-                        "fake-calendar",
-                        "create_event",
-                        Map.of("title", "Demo"),
-                        "calendar-request-123")))
+                        new McpCallRequest(
+                                UUID.randomUUID(),
+                                "fake-calendar",
+                                "create_event",
+                                Map.of("title", "Demo"),
+                                "calendar-request-123")))
                 .isInstanceOf(McpCallFailed.class)
                 .hasMessage("Gateway response is invalid");
     }

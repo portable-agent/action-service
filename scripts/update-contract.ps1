@@ -6,23 +6,29 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $repoPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-$targetPath = [System.IO.Path]::GetFullPath((Join-Path $repoPath 'src/main/openapi/action-api.yaml'))
-$targetDirectory = [System.IO.Path]::GetDirectoryName($targetPath)
+$targetDirectory = [System.IO.Path]::GetFullPath((Join-Path $repoPath 'src/main/openapi'))
 $fileId = [guid]::NewGuid()
-$stagedPath = Join-Path $targetDirectory ".action-api-$fileId.yaml"
-$backupPath = Join-Path $targetDirectory ".action-api-$fileId.backup"
+$contracts = @(
+    @{ Name = 'action-api'; Target = Join-Path $targetDirectory 'action-api.yaml' },
+    @{ Name = 'mcp-gateway-api'; Target = Join-Path $targetDirectory 'mcp-gateway-api.yaml' }
+)
+foreach ($contract in $contracts) {
+    $contract.Stage = Join-Path $targetDirectory ".$($contract.Name)-$fileId.yaml"
+    $contract.Backup = Join-Path $targetDirectory ".$($contract.Name)-$fileId.backup"
+}
 $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ("portable-agent-contracts-" + [guid]::NewGuid())
 $archiveName = "portable-agent-contracts-$Version.tgz"
 $archivePath = Join-Path $tempPath $archiveName
 $checksumPath = Join-Path $tempPath 'SHA256SUMS'
 $releaseUrl = "https://github.com/portable-agent/contracts/releases/download/v$Version"
+$replaced = @()
 
 try {
     if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
         throw 'GitHub CLI is required to verify the contract attestation.'
     }
     New-Item -ItemType Directory -Path $tempPath | Out-Null
-    Invoke-WebRequest -Uri "$releaseUrl/portable-agent-contracts-$Version.tgz" -OutFile $archivePath
+    Invoke-WebRequest -Uri "$releaseUrl/$archiveName" -OutFile $archivePath
     Invoke-WebRequest -Uri "$releaseUrl/SHA256SUMS" -OutFile $checksumPath
 
     $escapedArchiveName = [regex]::Escape($archiveName)
@@ -44,25 +50,40 @@ try {
         throw 'Cannot verify the GitHub attestation for the contract bundle.'
     }
 
-    & tar -xzf $archivePath -C $tempPath 'package/openapi/action-api.yaml'
+    $archiveFiles = $contracts | ForEach-Object { "package/openapi/$($_.Name).yaml" }
+    & tar -xzf $archivePath -C $tempPath $archiveFiles
     if ($LASTEXITCODE -ne 0) {
         throw 'Cannot unpack contract bundle.'
     }
 
-    $sourcePath = Join-Path $tempPath 'package/openapi/action-api.yaml'
-    $sourceText = Get-Content -Raw -LiteralPath $sourcePath
-    if ($sourceText -notmatch "(?m)^  version: $([regex]::Escape($Version))$") {
-        throw 'OpenAPI version does not match the requested release.'
+    foreach ($contract in $contracts) {
+        $sourcePath = Join-Path $tempPath "package/openapi/$($contract.Name).yaml"
+        $sourceText = Get-Content -Raw -LiteralPath $sourcePath
+        if ($sourceText -notmatch "(?m)^  version: $([regex]::Escape($Version))$") {
+            throw "$($contract.Name) version does not match the requested release."
+        }
+        Copy-Item -LiteralPath $sourcePath -Destination $contract.Stage
     }
 
-    Copy-Item -LiteralPath $sourcePath -Destination $stagedPath
-    [System.IO.File]::Replace($stagedPath, $targetPath, $backupPath, $true)
-    Remove-Item -LiteralPath $backupPath -Force
-    Write-Output "Action API updated to version $Version."
+    try {
+        foreach ($contract in $contracts) {
+            [System.IO.File]::Replace($contract.Stage, $contract.Target, $contract.Backup, $true)
+            $replaced += $contract
+        }
+    } catch {
+        foreach ($contract in $replaced) {
+            Copy-Item -LiteralPath $contract.Backup -Destination $contract.Target -Force
+        }
+        throw
+    }
+
+    Write-Output "Action API and MCP Gateway API updated to version $Version."
 } finally {
-    foreach ($localPath in @($stagedPath, $backupPath)) {
-        if (Test-Path -LiteralPath $localPath) {
-            Remove-Item -LiteralPath $localPath -Force
+    foreach ($contract in $contracts) {
+        foreach ($localPath in @($contract.Stage, $contract.Backup)) {
+            if (Test-Path -LiteralPath $localPath) {
+                Remove-Item -LiteralPath $localPath -Force
+            }
         }
     }
     $resolvedTempPath = [System.IO.Path]::GetFullPath($tempPath)

@@ -1,0 +1,105 @@
+openapi: 3.1.0
+info:
+  title: Portable Agent MCP Gateway API
+  version: 1.2.0
+  description: Безопасный внутренний вызов разрешённых tools в настроенных MCP-сервисах.
+  license:
+    name: Apache-2.0
+    identifier: Apache-2.0
+servers:
+  - url: https://api.portable-agent.dev/mcp-gateway
+security:
+  - bearerAuth: []
+paths:
+  /api/v1/calls:
+    post:
+      operationId: callMcpTool
+      summary: Вызвать разрешённый MCP tool
+      tags: [Calls]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/McpCallRequest"
+      responses:
+        "200":
+          description: MCP tool успешно выполнен
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/McpCallResponse"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        "502":
+          $ref: "#/components/responses/Problem"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    Problem:
+      description: Ошибка в формате RFC 9457 Problem Details
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  schemas:
+    McpCallRequest:
+      type: object
+      additionalProperties: false
+      required: [actionId, connector, tool, input, requestKey]
+      properties:
+        actionId:
+          type: string
+          format: uuid
+          description: Идентификатор подтверждённого действия.
+        connector:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Имя настроенного маршрута, но не URL.
+        tool:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Имя tool из allowlist маршрута.
+        input:
+          type: object
+          additionalProperties: true
+          description: Аргументы MCP tool без сетевого адреса и identity.
+        requestKey:
+          type: string
+          minLength: 8
+          maxLength: 128
+          description: Стабильный ключ одного логического выполнения.
+    McpCallResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          type: object
+          additionalProperties: true
+          description: Structured content MCP-ответа.
+        content:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+          description: Обычные MCP content blocks, если они присутствуют.
+    Problem:
+      type: object
+      additionalProperties: true
+      required: [type, title, status]
+      properties:
+        type: { type: string, format: uri-reference }
+        title: { type: string }
+        status: { type: integer, minimum: 400, maximum: 599 }

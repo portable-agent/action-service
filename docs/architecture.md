@@ -28,9 +28,10 @@ Temporal worker -> ActionActivity -> ActionService
 Flyway SQL — единственный источник схемы. Gradle создаёт Java-классы jOOQ из тех же SQL-файлов до
 компиляции. Поэтому код и схема не расходятся.
 
-OpenAPI из release `portable-agent/contracts` хранится в `src/main/openapi`. Gradle создаёт интерфейс
-`ActionsApi` и HTTP-модели в `build/generated-src/openapi`. Generated-код не коммитится. Контроллер
-реализует этот интерфейс, а service и domain не зависят от HTTP-классов.
+OpenAPI из одного release `portable-agent/contracts` хранится в `src/main/openapi`. Gradle создаёт
+интерфейс `ActionsApi` и его HTTP-модели в `build/generated-src/openapi`, а сетевые модели MCP Gateway —
+в `build/generated-src/mcp-openapi`. Generated-код не коммитится. Контроллер реализует generated
+интерфейс, а MCP-клиент отправляет и читает generated DTO. Service и domain от HTTP-классов не зависят.
 
 ## Текущий продуктовый срез
 

@@ -8,8 +8,8 @@ import static org.mockito.Mockito.when;
 
 import dev.portableagent.action.client.McpCallFailed;
 import dev.portableagent.action.client.McpClient;
-import dev.portableagent.action.client.McpRequest;
 import dev.portableagent.action.client.McpResult;
+import dev.portableagent.action.mcp.api.model.McpCallRequest;
 import dev.portableagent.action.model.Action;
 import dev.portableagent.action.model.ActionDecision;
 import dev.portableagent.action.service.ActionService;
@@ -42,11 +42,11 @@ class ActionActivityImplTest {
         var action = approvedAction();
         var request = requestFor(action);
         when(actionService.start(action.getId(), action.getPayloadHash())).thenReturn(action);
-        when(mcpClient.call(request)).thenReturn(new McpResult("event-123"));
+        when(mcpClient.call(action.getTenantId(), request)).thenReturn(new McpResult("event-123"));
 
         activity.run(action.getId(), action.getPayloadHash());
 
-        verify(mcpClient).call(request);
+        verify(mcpClient).call(action.getTenantId(), request);
         verify(actionService).succeed(action.getId(), "event-123");
     }
 
@@ -55,7 +55,7 @@ class ActionActivityImplTest {
         var action = approvedAction();
         var request = requestFor(action);
         when(actionService.start(action.getId(), action.getPayloadHash())).thenReturn(action);
-        when(mcpClient.call(request)).thenThrow(new McpCallFailed("Gateway call failed"));
+        when(mcpClient.call(action.getTenantId(), request)).thenThrow(new McpCallFailed("Gateway call failed"));
 
         assertThatThrownBy(() -> activity.run(action.getId(), action.getPayloadHash()))
                 .isInstanceOf(McpCallFailed.class);
@@ -102,13 +102,8 @@ class ActionActivityImplTest {
         return action;
     }
 
-    private McpRequest requestFor(Action action) {
-        return new McpRequest(
-                action.getId(),
-                action.getTenantId(),
-                action.getConnector(),
-                "create_event",
-                action.getPayload(),
-                action.getRequestKey());
+    private McpCallRequest requestFor(Action action) {
+        return new McpCallRequest(
+                action.getId(), action.getConnector(), "create_event", action.getPayload(), action.getRequestKey());
     }
 }

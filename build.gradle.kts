@@ -1,3 +1,5 @@
+import org.openapitools.generator.gradle.plugin.tasks.GenerateTask
+
 plugins {
     java
     jacoco
@@ -83,6 +85,7 @@ jooq {
 sourceSets.main {
     java.srcDir("build/generated-src/jooq/main")
     java.srcDir(layout.buildDirectory.dir("generated-src/openapi/src/main/java"))
+    java.srcDir(layout.buildDirectory.dir("generated-src/mcp-openapi/src/main/java"))
 }
 
 openApiGenerate {
@@ -114,6 +117,37 @@ openApiGenerate {
     )
 }
 
+val mcpApiGenerate =
+    tasks.register<GenerateTask>("mcpApiGenerate") {
+        generatorName.set("spring")
+        inputSpec.set("$projectDir/src/main/openapi/mcp-gateway-api.yaml")
+        outputDir.set(
+            layout.buildDirectory
+                .dir("generated-src/mcp-openapi")
+                .get()
+                .asFile.absolutePath,
+        )
+        modelPackage.set("dev.portableagent.action.mcp.api.model")
+        globalProperties.set(
+            mapOf(
+                "models" to "",
+                "modelDocs" to "false",
+                "modelTests" to "false",
+            ),
+        )
+        configOptions.set(
+            mapOf(
+                "annotationLibrary" to "none",
+                "documentationProvider" to "none",
+                "hideGenerationTimestamp" to "true",
+                "openApiNullable" to "false",
+                "performBeanValidation" to "true",
+                "useSpringBoot4" to "true",
+                "useSpringBuiltInValidation" to "true",
+            ),
+        )
+    }
+
 spotless {
     java {
         target("src/**/*.java")
@@ -134,7 +168,7 @@ spotless {
 }
 
 tasks.compileJava {
-    dependsOn(tasks.jooqCodegen, tasks.openApiGenerate)
+    dependsOn(tasks.jooqCodegen, tasks.openApiGenerate, mcpApiGenerate)
 }
 
 tasks.withType<Test> {
