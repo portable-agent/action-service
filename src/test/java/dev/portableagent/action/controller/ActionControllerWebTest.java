@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import dev.portableagent.action.config.SecurityConfig;
+import dev.portableagent.action.exception.InvalidActionInput;
 import dev.portableagent.action.model.Action;
 import dev.portableagent.action.model.ActionDecision;
 import dev.portableagent.action.service.ActionService;
@@ -50,7 +51,7 @@ class ActionControllerWebTest {
                 "request-123",
                 "calendar.create_event",
                 "fake-calendar",
-                Map.of("title", "Demo"),
+                validPayload(),
                 "a".repeat(64),
                 Instant.parse("2026-09-01T10:00:00Z"));
         when(actionService.create(eq(tenantId), eq(userId), any(CreateActionCommand.class)))
@@ -64,7 +65,12 @@ class ActionControllerWebTest {
                     {
                       "kind": "calendar.create_event",
                       "connector": "fake-calendar",
-                      "payload": {"title": "Demo"},
+                      "payload": {
+                        "title": "Demo",
+                        "startAt": "2026-09-01T12:00:00+03:00",
+                        "endAt": "2026-09-01T12:30:00+03:00",
+                        "timeZone": "Europe/Moscow"
+                      },
                       "requestKey": "request-123"
                     }
                     """))
@@ -92,6 +98,27 @@ class ActionControllerWebTest {
     }
 
     @Test
+    void proposeAction_whenTimeZoneIsMissing_shouldReturnBadRequest() throws Exception {
+        mockMvc.perform(post("/api/v1/actions")
+                        .with(jwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                    {
+                      "kind": "calendar.create_event",
+                      "connector": "fake-calendar",
+                      "payload": {
+                        "title": "Demo",
+                        "startAt": "2026-09-01T12:00:00+03:00",
+                        "endAt": "2026-09-01T12:30:00+03:00"
+                      },
+                      "requestKey": "request-123"
+                    }
+                    """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.type").value("https://portable-agent.dev/problems/validation-failed"));
+    }
+
+    @Test
     void proposeAction_withoutJwt_shouldReturnUnauthorized() throws Exception {
         mockMvc.perform(post("/api/v1/actions")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -99,11 +126,45 @@ class ActionControllerWebTest {
                     {
                       "kind": "calendar.create_event",
                       "connector": "fake-calendar",
-                      "payload": {"title": "Demo"},
+                      "payload": {
+                        "title": "Demo",
+                        "startAt": "2026-09-01T12:00:00+03:00",
+                        "endAt": "2026-09-01T12:30:00+03:00",
+                        "timeZone": "Europe/Moscow"
+                      },
                       "requestKey": "request-123"
                     }
                     """))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void proposeAction_whenDatesAreInvalid_shouldReturnBadRequest() throws Exception {
+        var tenantId = UUID.randomUUID();
+        var userId = UUID.randomUUID();
+        when(actionService.create(any(), any(), any(CreateActionCommand.class)))
+                .thenThrow(new InvalidActionInput("endAt must be after startAt"));
+
+        mockMvc.perform(post("/api/v1/actions")
+                        .with(jwt().jwt(token ->
+                                token.subject(userId.toString()).claim("tenant_id", tenantId.toString())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                    {
+                      "kind": "calendar.create_event",
+                      "connector": "fake-calendar",
+                      "payload": {
+                        "title": "Demo",
+                        "startAt": "2026-09-01T12:30:00+03:00",
+                        "endAt": "2026-09-01T12:00:00+03:00",
+                        "timeZone": "Europe/Moscow"
+                      },
+                      "requestKey": "request-123"
+                    }
+                    """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("endAt must be after startAt"))
+                .andExpect(jsonPath("$.type").value("https://portable-agent.dev/problems/validation-failed"));
     }
 
     @Test
@@ -117,7 +178,7 @@ class ActionControllerWebTest {
                 "request-result",
                 "calendar.create_event",
                 "fake-calendar",
-                Map.of("title", "Demo"),
+                validPayload(),
                 "a".repeat(64),
                 now);
         action.applyDecision(ActionDecision.CONFIRM, "a".repeat(64), now.plusSeconds(1));
@@ -144,7 +205,7 @@ class ActionControllerWebTest {
                 "request-decision",
                 "calendar.create_event",
                 "fake-calendar",
-                Map.of("title", "Demo"),
+                validPayload(),
                 "a".repeat(64),
                 now);
         action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), now.plusSeconds(1));
@@ -163,5 +224,13 @@ class ActionControllerWebTest {
                     """.formatted(action.getPayloadHash())))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.status").value("APPROVED"));
+    }
+
+    private Map<String, Object> validPayload() {
+        return Map.of(
+                "title", "Demo",
+                "startAt", "2026-09-01T12:00:00+03:00",
+                "endAt", "2026-09-01T12:30:00+03:00",
+                "timeZone", "Europe/Moscow");
     }
 }

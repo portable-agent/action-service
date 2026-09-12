@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Portable Agent Action API
-  version: 1.2.0
+  version: 2.0.0
   description: Создание, просмотр и подтверждение безопасных действий агента.
   license:
     name: Apache-2.0
@@ -105,9 +105,7 @@ components:
           type: string
           enum: [fake-calendar]
         payload:
-          type: object
-          minProperties: 1
-          additionalProperties: true
+          $ref: "#/components/schemas/CalendarCreateEventPayload"
         requestKey:
           type: string
           minLength: 8
@@ -154,8 +152,7 @@ components:
         kind: { type: string }
         connector: { type: string }
         payload:
-          type: object
-          additionalProperties: true
+          $ref: "#/components/schemas/CalendarCreateEventPayload"
           description: Сохранённые данные, которые пользователь подтверждает по payloadHash.
         payloadHash: { type: string, pattern: "^[a-f0-9]{64}$" }
         result:
@@ -173,6 +170,28 @@ components:
           minLength: 1
           maxLength: 256
           description: Стабильный идентификатор события у календарного коннектора.
+    CalendarCreateEventPayload:
+      type: object
+      additionalProperties: false
+      required: [title, startAt, endAt, timeZone]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          pattern: ".*\\S.*"
+        startAt: { type: string, format: date-time }
+        endAt: { type: string, format: date-time }
+        timeZone:
+          type: string
+          maxLength: 100
+          pattern: "^(UTC|[A-Za-z_]+(?:/[A-Za-z0-9_+-]+)+)$"
+        description: { type: string, maxLength: 2000 }
+        attendees:
+          type: array
+          maxItems: 50
+          uniqueItems: true
+          items: { type: string, format: email, maxLength: 254 }
     Problem:
       type: object
       required: [type, title, status]

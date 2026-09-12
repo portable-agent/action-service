@@ -19,7 +19,8 @@ docker compose up -d
 ```
 
 По умолчанию API ожидает JWT от Keycloak. Для локальной разработки issuer задаётся переменной
-`OIDC_ISSUER_URI`. Контракт API находится в репозитории `portable-agent/contracts`.
+`OIDC_ISSUER_URI`. JWT также должен содержать audience из `OIDC_AUDIENCE` (по умолчанию
+`action-service`). Контракт API находится в репозитории `portable-agent/contracts`.
 
 Worker MCP выключен по умолчанию. Для его запуска нужны настройки без значений, зашитых в image:
 
@@ -53,7 +54,7 @@ HTTP-интерфейс Action API и сетевые модели MCP Gateway с
 contracts:
 
 ```powershell
-pwsh ./scripts/update-contract.ps1 -Version 1.2.0
+pwsh ./scripts/update-contract.ps1 -Version 2.0.0
 ```
 
 Миграция `V2` один раз удаляет тестовые записи старого pre-MVP-каркаса: в схеме `V1` payload не
@@ -66,7 +67,7 @@ pwsh ./scripts/update-contract.ps1 -Version 1.2.0
 `start`, `succeed` и `fail` также идемпотентны: повтор не меняет версию и время действия. Другой
 `eventId` после успеха отклоняется как конфликт.
 
-Action API и outbound-вызов MCP Gateway соответствуют bundle `portable-agent/contracts` версии `1.2.0`.
+Action API и outbound-вызов MCP Gateway соответствуют bundle `portable-agent/contracts` версии `2.0.0`.
 
 ## Где читать дальше
 

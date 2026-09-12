@@ -23,16 +23,19 @@ public class ActionService {
     private final ActionRepository actionRepository;
     private final OutboxRepository outboxRepository;
     private final PayloadHash payloadHash;
+    private final CalendarInputCheck calendarInputCheck;
     private final Clock clock;
 
     public ActionService(
             ActionRepository actionRepository,
             OutboxRepository outboxRepository,
             PayloadHash payloadHash,
+            CalendarInputCheck calendarInputCheck,
             Clock clock) {
         this.actionRepository = actionRepository;
         this.outboxRepository = outboxRepository;
         this.payloadHash = payloadHash;
+        this.calendarInputCheck = calendarInputCheck;
         this.clock = clock;
     }
 
@@ -44,6 +47,7 @@ public class ActionService {
         }
 
         checkAllowed(request);
+        calendarInputCheck.check(request.payload());
 
         var now = clock.instant();
         var action = Action.create(

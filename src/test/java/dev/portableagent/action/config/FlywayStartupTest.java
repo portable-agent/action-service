@@ -71,7 +71,11 @@ class FlywayStartupTest {
                 new CreateActionCommand(
                         "calendar.create_event",
                         "fake-calendar",
-                        Map.of("title", "Atomic outbox"),
+                        Map.of(
+                                "title", "Atomic outbox",
+                                "startAt", "2026-09-01T12:00:00+03:00",
+                                "endAt", "2026-09-01T12:30:00+03:00",
+                                "timeZone", "Europe/Moscow"),
                         "atomic-outbox-request"));
         var command = new DecideActionCommand(ActionDecision.CONFIRM, action.getPayloadHash());
         doThrow(new IllegalStateException("Outbox is not available"))
