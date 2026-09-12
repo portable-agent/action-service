@@ -1,6 +1,10 @@
 spring:
   application:
     name: action-service
+  jackson:
+    datatype:
+      datetime:
+        adjust-dates-to-context-time-zone: false
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/actions}
     username: ${DATABASE_USER:actions}

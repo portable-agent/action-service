@@ -77,8 +77,50 @@ class ActionControllerWebTest {
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", "/api/v1/actions/" + action.getId()))
                 .andExpect(jsonPath("$.payload.title").value("Demo"))
+                .andExpect(jsonPath("$.payload.startAt").value("2026-09-01T12:00:00+03:00"))
+                .andExpect(jsonPath("$.payload.endAt").value("2026-09-01T12:30:00+03:00"))
                 .andExpect(jsonPath("$.result").doesNotExist())
                 .andExpect(jsonPath("$.status").value("AWAITING_APPROVAL"));
+    }
+
+    @Test
+    void proposeAction_shouldKeepInputOffset() throws Exception {
+        var tenantId = UUID.randomUUID();
+        var userId = UUID.randomUUID();
+        when(actionService.create(eq(tenantId), eq(userId), any(CreateActionCommand.class)))
+                .thenAnswer(call -> {
+                    var command = call.getArgument(2, CreateActionCommand.class);
+                    return Action.create(
+                            tenantId,
+                            userId,
+                            command.requestKey(),
+                            command.kind(),
+                            command.connector(),
+                            command.payload(),
+                            "a".repeat(64),
+                            Instant.parse("2026-09-01T10:00:00Z"));
+                });
+
+        mockMvc.perform(post("/api/v1/actions")
+                        .with(jwt().jwt(token ->
+                                token.subject(userId.toString()).claim("tenant_id", tenantId.toString())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                    {
+                      "kind": "calendar.create_event",
+                      "connector": "fake-calendar",
+                      "payload": {
+                        "title": "Demo",
+                        "startAt": "2026-09-01T12:00:00+03:00",
+                        "endAt": "2026-09-01T12:30:00+03:00",
+                        "timeZone": "Europe/Moscow"
+                      },
+                      "requestKey": "request-123"
+                    }
+                    """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.payload.startAt").value("2026-09-01T12:00:00+03:00"))
+                .andExpect(jsonPath("$.payload.endAt").value("2026-09-01T12:30:00+03:00"));
     }
 
     @Test
