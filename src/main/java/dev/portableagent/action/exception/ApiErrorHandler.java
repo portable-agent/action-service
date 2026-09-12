@@ -28,6 +28,11 @@ public class ApiErrorHandler {
                 "validation-failed");
     }
 
+    @ExceptionHandler(InvalidActionInput.class)
+    ProblemDetail invalidInput(InvalidActionInput error) {
+        return problem(HttpStatus.BAD_REQUEST, "Validation failed", error.getMessage(), "validation-failed");
+    }
+
     private ProblemDetail problem(HttpStatus status, String title, String detail, String type) {
         var problem = ProblemDetail.forStatusAndDetail(status, detail);
         problem.setTitle(title);

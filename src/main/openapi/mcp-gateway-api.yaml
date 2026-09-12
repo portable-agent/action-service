@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Portable Agent MCP Gateway API
-  version: 1.2.0
+  version: 2.0.0
   description: Безопасный внутренний вызов разрешённых tools в настроенных MCP-сервисах.
   license:
     name: Apache-2.0

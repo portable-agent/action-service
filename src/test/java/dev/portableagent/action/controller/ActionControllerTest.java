@@ -5,11 +5,13 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import dev.portableagent.action.api.model.CalendarCreateEventPayload;
 import dev.portableagent.action.api.model.ProposeActionRequest;
 import dev.portableagent.action.model.Action;
 import dev.portableagent.action.service.ActionService;
 import dev.portableagent.action.service.CreateActionCommand;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
@@ -37,11 +39,20 @@ class ActionControllerTest {
     void proposeAction_whenJwtIsValid_shouldCallService() {
         var tenantId = UUID.randomUUID();
         var userId = UUID.randomUUID();
-        var payload = Map.<String, Object>of("title", "Demo");
+        var payload = Map.<String, Object>of(
+                "title", "Demo",
+                "startAt", "2026-09-01T12:00+03:00",
+                "endAt", "2026-09-01T12:30+03:00",
+                "timeZone", "Europe/Moscow");
+        var apiPayload = new CalendarCreateEventPayload(
+                "Demo",
+                OffsetDateTime.parse("2026-09-01T12:00+03:00"),
+                OffsetDateTime.parse("2026-09-01T12:30+03:00"),
+                "Europe/Moscow");
         var request = new ProposeActionRequest(
                 ProposeActionRequest.KindEnum.CALENDAR_CREATE_EVENT,
                 ProposeActionRequest.ConnectorEnum.FAKE_CALENDAR,
-                payload,
+                apiPayload,
                 "request-123");
         var action = Action.create(
                 tenantId,
@@ -60,7 +71,7 @@ class ActionControllerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getPayload()).isEqualTo(payload);
+        assertThat(response.getBody().getPayload()).isEqualTo(apiPayload);
         assertThat(command.getValue().requestKey()).isEqualTo("request-123");
         verify(actionService).create(eq(tenantId), eq(userId), eq(command.getValue()));
     }

@@ -40,12 +40,15 @@ class ActionServiceTest {
     @Mock
     PayloadHash payloadHash;
 
+    @Mock
+    CalendarInputCheck calendarInputCheck;
+
     private final Clock clock = Clock.fixed(Instant.parse("2026-08-28T10:00:00Z"), ZoneOffset.UTC);
     private ActionService service;
 
     @BeforeEach
     void setUp() {
-        service = new ActionService(actionRepository, outboxRepository, payloadHash, clock);
+        service = new ActionService(actionRepository, outboxRepository, payloadHash, calendarInputCheck, clock);
     }
 
     @Test
