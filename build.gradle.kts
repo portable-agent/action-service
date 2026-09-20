@@ -37,7 +37,7 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql")
     runtimeOnly("org.postgresql:postgresql")
 
-    jooqCodegen("org.jooq:jooq-meta-extensions:3.21.7")
+    jooqCodegen("org.jooq:jooq-meta-extensions:3.21.8")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
