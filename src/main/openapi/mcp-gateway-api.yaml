@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Portable Agent MCP Gateway API
-  version: 2.0.0
+  version: 2.6.0
   description: Безопасный внутренний вызов разрешённых tools в настроенных MCP-сервисах.
   license:
     name: Apache-2.0
@@ -81,6 +81,17 @@ components:
           minLength: 8
           maxLength: 128
           description: Стабильный ключ одного логического выполнения.
+        context:
+          $ref: "#/components/schemas/ExecutionContext"
+    ExecutionContext:
+      type: object
+      additionalProperties: false
+      required: [actorId]
+      properties:
+        actorId:
+          type: string
+          format: uuid
+          description: Владелец действия из сохранённой записи Action Service.
     McpCallResponse:
       type: object
       additionalProperties: false
