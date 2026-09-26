@@ -10,6 +10,7 @@ import dev.portableagent.action.client.CalendarRequestMapper;
 import dev.portableagent.action.client.McpCallFailed;
 import dev.portableagent.action.client.McpClient;
 import dev.portableagent.action.client.McpResult;
+import dev.portableagent.action.mcp.api.model.ExecutionContext;
 import dev.portableagent.action.mcp.api.model.McpCallRequest;
 import dev.portableagent.action.model.Action;
 import dev.portableagent.action.model.ActionDecision;
@@ -110,6 +111,7 @@ class ActionActivityImplTest {
                 "start_at", "2026-09-11T10:00:00+03:00",
                 "end_at", "2026-09-11T10:30:00+03:00",
                 "time_zone", "Europe/Moscow");
-        return new McpCallRequest(action.getId(), action.getConnector(), "create_event", input, action.getRequestKey());
+        return new McpCallRequest(action.getId(), action.getConnector(), "create_event", input, action.getRequestKey())
+                .context(new ExecutionContext(action.getActorId()));
     }
 }

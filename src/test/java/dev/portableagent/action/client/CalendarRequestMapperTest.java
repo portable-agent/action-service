@@ -37,6 +37,8 @@ class CalendarRequestMapperTest {
                 .doesNotContainKey("unknown");
         assertThat(request.getRequestKey()).isEqualTo(action.getRequestKey());
         assertThat(request.getTool()).isEqualTo("create_event");
+        assertThat(request.getContext().getActorId()).isEqualTo(action.getActorId());
+        assertThat(request.getInput()).doesNotContainKey("actorId");
     }
 
     private Action action(Map<String, Object> payload) {

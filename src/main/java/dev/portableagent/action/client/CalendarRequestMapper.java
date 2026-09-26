@@ -1,5 +1,6 @@
 package dev.portableagent.action.client;
 
+import dev.portableagent.action.mcp.api.model.ExecutionContext;
 import dev.portableagent.action.mcp.api.model.McpCallRequest;
 import dev.portableagent.action.model.Action;
 import java.util.LinkedHashMap;
@@ -20,7 +21,8 @@ public class CalendarRequestMapper {
         input.put("time_zone", payload.get("timeZone"));
         copyOptional(payload, input, "description");
         copyOptional(payload, input, "attendees");
-        return new McpCallRequest(action.getId(), action.getConnector(), CREATE_EVENT, input, action.getRequestKey());
+        return new McpCallRequest(action.getId(), action.getConnector(), CREATE_EVENT, input, action.getRequestKey())
+                .context(new ExecutionContext(action.getActorId()));
     }
 
     private void copyOptional(Map<String, Object> payload, Map<String, Object> input, String name) {

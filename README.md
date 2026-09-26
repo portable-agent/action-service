@@ -67,7 +67,9 @@ pwsh ./scripts/update-contract.ps1 -Version 2.0.0
 `start`, `succeed` и `fail` также идемпотентны: повтор не меняет версию и время действия. Другой
 `eventId` после успеха отклоняется как конфликт.
 
-Action API и outbound-вызов MCP Gateway соответствуют bundle `portable-agent/contracts` версии `2.0.0`.
+Action API и outbound-вызов MCP Gateway соответствуют bundle `portable-agent/contracts` версии `2.6.0`.
+При выполнении `context.actorId` берётся из сохранённого Action и передаётся отдельно от аргументов
+MCP tool. Модель и пользовательский payload не могут подменить владельца подключения.
 
 ## Где читать дальше
 

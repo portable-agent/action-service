@@ -17,17 +17,17 @@ $requiredFiles = @(
 
 $missingFiles = $requiredFiles | Where-Object { -not (Test-Path -LiteralPath $_ -PathType Leaf) }
 if ($missingFiles.Count -gt 0) {
-    throw "Нет обязательных файлов: $($missingFiles -join ', ')"
+    throw "Required files are missing: $($missingFiles -join ', ')"
 }
 
 $catalogText = Get-Content -LiteralPath "catalog-info.yaml" -Raw
 if ($catalogText -notmatch "backstage\.io/techdocs-ref:\s*dir:\.") {
-    throw "В catalog-info.yaml нет backstage.io/techdocs-ref: dir:."
+    throw "catalog-info.yaml has no backstage.io/techdocs-ref: dir:."
 }
 
 $mkdocsText = Get-Content -LiteralPath "mkdocs.yml" -Raw
 if ($mkdocsText -notmatch "(?m)^docs_dir:\s*docs\s*$") {
-    throw "В mkdocs.yml должен быть docs_dir: docs."
+    throw "mkdocs.yml must contain docs_dir: docs."
 }
 
 $contractVersions = @(
@@ -36,12 +36,12 @@ $contractVersions = @(
 ) | ForEach-Object {
     $contractText = Get-Content -LiteralPath $_ -Raw
     if ($contractText -notmatch "(?m)^  version: (?<version>\d+\.\d+\.\d+)$") {
-        throw "В $_ нет версии OpenAPI."
+        throw "$_ has no OpenAPI version."
     }
     $Matches.version
 }
 if (($contractVersions | Select-Object -Unique).Count -ne 1) {
-    throw "Action API и MCP Gateway API взяты из разных версий contracts."
+    throw "Action API and MCP Gateway API use different contract versions."
 }
 
-Write-Host "Документация action-service соответствует стандарту."
+Write-Host "Action Service documentation follows the project standard."
