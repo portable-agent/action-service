@@ -7,18 +7,16 @@ import dev.portableagent.action.api.model.ProposeActionRequest;
 import dev.portableagent.action.service.ActionService;
 import java.net.URI;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@RequiredArgsConstructor
 public class ActionController implements ActionsApi {
     private final ActionService actionService;
-
-    public ActionController(ActionService actionService) {
-        this.actionService = actionService;
-    }
 
     @Override
     public ResponseEntity<ActionResponse> proposeAction(ProposeActionRequest request) {

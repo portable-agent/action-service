@@ -9,7 +9,7 @@ controller -> service -> repository -> PostgreSQL
 controller -> ActionService -> PostgreSQL + outbox
 scheduler  -> TemporalSender -> Temporal workflow
 Temporal worker -> ActionActivity -> ActionService
-                               \-> McpClient -> MCP Gateway -> Calendar MCP
+                               \-> ActionCalls -> ActionCall -> McpClient -> MCP Gateway -> Calendar MCP
 ```
 
 ## Папки
@@ -38,6 +38,9 @@ OpenAPI из одного release `portable-agent/contracts` хранится в
 `ActionService` передаёт проверку в `ActionRules`. Реестр выбирает правило по `kind` через `Map`, поэтому
 новое действие добавляется отдельной стратегией, а не новой веткой `if`. `CalendarActionRule` разрешает
 `fake-calendar` и `google-calendar` и проверяет общий payload встречи до вычисления hash и сохранения.
+В worker похожий реестр `ActionCalls` выбирает выполнение по `kind`. Календарный MCP-вызов находится в
+`CalendarActionCall`, поэтому `ActionActivity` не знает о конкретных интеграциях. Для нового вида
+действия нужны отдельные `ActionRule` и `ActionCall`; менять оба реестра и activity не требуется.
 Повтор с существующим `requestKey` по-прежнему возвращает ранее сохранённое действие. Конкурентные
 повторы защищены ограничением БД и jOOQ `ON CONFLICT DO NOTHING`; запись outbox создаёт только запрос,
 который сохранил действие.

@@ -37,6 +37,8 @@ dependencies {
     implementation("io.temporal:temporal-sdk:1.38.0")
     implementation("org.springframework.boot:spring-boot-starter-flyway")
     implementation("org.flywaydb:flyway-database-postgresql")
+    compileOnly("org.projectlombok:lombok")
+    annotationProcessor("org.projectlombok:lombok")
     runtimeOnly("org.postgresql:postgresql")
 
     jooqCodegen("org.jooq:jooq-meta-extensions:3.21.8")

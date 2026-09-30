@@ -6,12 +6,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import dev.portableagent.action.client.CalendarRequestMapper;
 import dev.portableagent.action.client.McpCallFailed;
-import dev.portableagent.action.client.McpClient;
-import dev.portableagent.action.client.McpResult;
-import dev.portableagent.action.mcp.api.model.ExecutionContext;
-import dev.portableagent.action.mcp.api.model.McpCallRequest;
 import dev.portableagent.action.model.Action;
 import dev.portableagent.action.model.ActionDecision;
 import dev.portableagent.action.service.ActionService;
@@ -30,34 +25,32 @@ class ActionActivityImplTest {
     ActionService actionService;
 
     @Mock
-    McpClient mcpClient;
+    ActionCalls actionCalls;
 
     private ActionActivityImpl activity;
 
     @BeforeEach
     void setUp() {
-        activity = new ActionActivityImpl(actionService, mcpClient, new CalendarRequestMapper());
+        activity = new ActionActivityImpl(actionService, actionCalls);
     }
 
     @Test
     void run_whenMcpCallSucceeds_shouldSaveEventId() {
         var action = approvedAction();
-        var request = requestFor(action);
         when(actionService.start(action.getId(), action.getPayloadHash())).thenReturn(action);
-        when(mcpClient.call(action.getTenantId(), request)).thenReturn(new McpResult("event-123"));
+        when(actionCalls.run(action)).thenReturn("event-123");
 
         activity.run(action.getId(), action.getPayloadHash());
 
-        verify(mcpClient).call(action.getTenantId(), request);
+        verify(actionCalls).run(action);
         verify(actionService).succeed(action.getId(), "event-123");
     }
 
     @Test
     void run_whenMcpCallFails_shouldLetTemporalRetry() {
         var action = approvedAction();
-        var request = requestFor(action);
         when(actionService.start(action.getId(), action.getPayloadHash())).thenReturn(action);
-        when(mcpClient.call(action.getTenantId(), request)).thenThrow(new McpCallFailed("Gateway call failed"));
+        when(actionCalls.run(action)).thenThrow(new McpCallFailed("Gateway call failed"));
 
         assertThatThrownBy(() -> activity.run(action.getId(), action.getPayloadHash()))
                 .isInstanceOf(McpCallFailed.class);
@@ -83,7 +76,7 @@ class ActionActivityImplTest {
 
         activity.run(action.getId(), action.getPayloadHash());
 
-        verifyNoInteractions(mcpClient);
+        verifyNoInteractions(actionCalls);
     }
 
     private Action approvedAction() {
@@ -102,16 +95,5 @@ class ActionActivityImplTest {
                 Instant.parse("2026-09-11T06:00:00Z"));
         action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), Instant.parse("2026-09-11T06:01:00Z"));
         return action;
-    }
-
-    private McpCallRequest requestFor(Action action) {
-        var input = Map.<String, Object>of(
-                "request_key", action.getRequestKey(),
-                "title", "Demo",
-                "start_at", "2026-09-11T10:00:00+03:00",
-                "end_at", "2026-09-11T10:30:00+03:00",
-                "time_zone", "Europe/Moscow");
-        return new McpCallRequest(action.getId(), action.getConnector(), "create_event", input, action.getRequestKey())
-                .context(new ExecutionContext(action.getActorId()));
     }
 }

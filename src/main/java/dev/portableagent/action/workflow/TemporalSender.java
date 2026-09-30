@@ -6,17 +6,14 @@ import io.temporal.client.WorkflowExecutionAlreadyStarted;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.client.WorkflowStub;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class TemporalSender {
     private final WorkflowClient workflowClient;
     private final TemporalProperties properties;
-
-    public TemporalSender(WorkflowClient workflowClient, TemporalProperties properties) {
-        this.workflowClient = workflowClient;
-        this.properties = properties;
-    }
 
     public void send(UUID actionId) {
         var workflow = newWorkflow(actionId);
