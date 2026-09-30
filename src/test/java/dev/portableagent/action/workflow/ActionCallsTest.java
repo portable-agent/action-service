@@ -8,8 +8,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import dev.portableagent.action.model.Action;
+import dev.portableagent.action.model.ActionKind;
 import java.time.Instant;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -28,10 +28,8 @@ class ActionCallsTest {
     @Test
     void run_whenKindExists_shouldUseMatchingCall() {
         var action = action("calendar.create_event");
-        when(calendarCall.kind()).thenReturn("calendar.create_event");
-        when(taskCall.kind()).thenReturn("task.create");
         when(calendarCall.run(action)).thenReturn("event-123");
-        var calls = new ActionCalls(List.of(calendarCall, taskCall));
+        var calls = new ActionCalls(Map.of(ActionKind.CALENDAR_CREATE_EVENT, calendarCall));
 
         var result = calls.run(action);
 
@@ -43,8 +41,7 @@ class ActionCallsTest {
     @Test
     void run_whenKindDoesNotExist_shouldRejectAction() {
         var action = action("payment.send");
-        when(calendarCall.kind()).thenReturn("calendar.create_event");
-        var calls = new ActionCalls(List.of(calendarCall));
+        var calls = new ActionCalls(Map.of(ActionKind.CALENDAR_CREATE_EVENT, calendarCall));
 
         assertThatThrownBy(() -> calls.run(action))
                 .isInstanceOf(IllegalArgumentException.class)

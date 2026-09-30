@@ -1,22 +1,18 @@
 package dev.portableagent.action.workflow;
 
 import dev.portableagent.action.model.Action;
-import java.util.List;
+import dev.portableagent.action.model.ActionKind;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class ActionCalls {
-    private final Map<String, ActionCall> byKind;
-
-    public ActionCalls(List<ActionCall> calls) {
-        byKind = calls.stream().collect(Collectors.toUnmodifiableMap(ActionCall::kind, Function.identity()));
-    }
+    private final Map<ActionKind, ActionCall> byKind;
 
     public String run(Action action) {
-        var call = byKind.get(action.getKind());
+        var call = byKind.get(ActionKind.from(action.getKind()));
         if (call == null) {
             throw new IllegalArgumentException("Unsupported action kind: " + action.getKind());
         }

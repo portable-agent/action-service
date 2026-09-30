@@ -1,5 +1,6 @@
 package dev.portableagent.action.workflow;
 
+import dev.portableagent.action.model.ActionDecision;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.common.RetryOptions;
 import io.temporal.failure.ActivityFailure;
@@ -18,24 +19,31 @@ public class ActionWorkflowImpl implements ActionWorkflow {
                             .build())
                     .build());
 
-    private String decision;
+    private ActionDecision decision;
     private String payloadHash;
 
     @Override
     public void run(UUID actionId) {
         Workflow.await(() -> decision != null);
-        if ("CONFIRM".equals(decision)) {
-            try {
-                activity.run(actionId, payloadHash);
-            } catch (ActivityFailure error) {
-                activity.fail(actionId);
+        switch (decision) {
+            case CONFIRM -> runAction(actionId);
+            case CANCEL -> {
+                // The decision was already saved by ActionService.
             }
+        }
+    }
+
+    private void runAction(UUID actionId) {
+        try {
+            activity.run(actionId, payloadHash);
+        } catch (ActivityFailure error) {
+            activity.fail(actionId);
         }
     }
 
     @Override
     public void decision(String newDecision, String newPayloadHash) {
-        decision = newDecision;
+        decision = ActionDecision.valueOf(newDecision);
         payloadHash = newPayloadHash;
     }
 }

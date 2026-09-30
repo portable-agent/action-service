@@ -41,6 +41,8 @@ OpenAPI из одного release `portable-agent/contracts` хранится в
 В worker похожий реестр `ActionCalls` выбирает выполнение по `kind`. Календарный MCP-вызов находится в
 `CalendarActionCall`, поэтому `ActionActivity` не знает о конкретных интеграциях. Для нового вида
 действия нужны отдельные `ActionRule` и `ActionCall`; менять оба реестра и activity не требуется.
+Обе неизменяемые map создаёт `ApplicationConfig` из списков Spring-стратегий через `MapUtil`. Ключ
+`ActionKind` проверяется компилятором и не зависит от имени Spring-бина.
 Повтор с существующим `requestKey` по-прежнему возвращает ранее сохранённое действие. Конкурентные
 повторы защищены ограничением БД и jOOQ `ON CONFLICT DO NOTHING`; запись outbox создаёт только запрос,
 который сохранил действие.

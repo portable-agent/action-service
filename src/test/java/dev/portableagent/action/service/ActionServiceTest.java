@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import dev.portableagent.action.exception.ActionChanged;
 import dev.portableagent.action.model.Action;
 import dev.portableagent.action.model.ActionDecision;
+import dev.portableagent.action.model.ActionKind;
 import dev.portableagent.action.model.ActionStatus;
 import dev.portableagent.action.model.OutboxItem;
 import dev.portableagent.action.model.OutboxType;
@@ -48,7 +49,8 @@ class ActionServiceTest {
 
     @BeforeEach
     void setUp() {
-        var rules = new ActionRules(java.util.List.of(new CalendarActionRule(calendarInputCheck)));
+        var rules =
+                new ActionRules(Map.of(ActionKind.CALENDAR_CREATE_EVENT, new CalendarActionRule(calendarInputCheck)));
         service = new ActionService(actionRepository, outboxRepository, payloadHash, rules, clock);
     }
 
