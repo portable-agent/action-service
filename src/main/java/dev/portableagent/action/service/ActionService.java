@@ -16,26 +16,24 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ActionService {
-    private static final String CALENDAR_ACTION = "calendar.create_event";
-    private static final String FAKE_CALENDAR = "fake-calendar";
     private static final int CHANGE_TRIES = 3;
 
     private final ActionRepository actionRepository;
     private final OutboxRepository outboxRepository;
     private final PayloadHash payloadHash;
-    private final CalendarInputCheck calendarInputCheck;
+    private final ActionRules actionRules;
     private final Clock clock;
 
     public ActionService(
             ActionRepository actionRepository,
             OutboxRepository outboxRepository,
             PayloadHash payloadHash,
-            CalendarInputCheck calendarInputCheck,
+            ActionRules actionRules,
             Clock clock) {
         this.actionRepository = actionRepository;
         this.outboxRepository = outboxRepository;
         this.payloadHash = payloadHash;
-        this.calendarInputCheck = calendarInputCheck;
+        this.actionRules = actionRules;
         this.clock = clock;
     }
 
@@ -46,8 +44,7 @@ public class ActionService {
             return oldAction.get();
         }
 
-        checkAllowed(request);
-        calendarInputCheck.check(request.payload());
+        actionRules.check(request);
 
         var now = clock.instant();
         var action = Action.create(
@@ -66,15 +63,6 @@ public class ActionService {
         }
         outboxRepository.save(OutboxItem.start(action.getId(), now));
         return action;
-    }
-
-    private void checkAllowed(CreateActionCommand request) {
-        if (!CALENDAR_ACTION.equals(request.kind())) {
-            throw new IllegalArgumentException("Only calendar.create_event is supported");
-        }
-        if (!FAKE_CALENDAR.equals(request.connector())) {
-            throw new IllegalArgumentException("Only fake-calendar is supported");
-        }
     }
 
     @Transactional(readOnly = true)

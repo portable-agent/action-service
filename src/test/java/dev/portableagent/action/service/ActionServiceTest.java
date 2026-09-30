@@ -48,7 +48,8 @@ class ActionServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ActionService(actionRepository, outboxRepository, payloadHash, calendarInputCheck, clock);
+        var rules = new ActionRules(java.util.List.of(new CalendarActionRule(calendarInputCheck)));
+        service = new ActionService(actionRepository, outboxRepository, payloadHash, rules, clock);
     }
 
     @Test
@@ -121,22 +122,37 @@ class ActionServiceTest {
 
         assertThatThrownBy(() -> service.create(tenantId, UUID.randomUUID(), request))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("Only calendar.create_event is supported");
+                .hasMessage("Unsupported action kind: task.create");
 
         verify(actionRepository, never()).saveIfMissing(any(Action.class));
         verifyNoInteractions(outboxRepository, payloadHash);
     }
 
     @Test
-    void create_whenConnectorIsNotFakeCalendar_shouldRejectRequest() {
+    void create_whenConnectorIsGoogleCalendar_shouldSaveAction() {
         var tenantId = UUID.randomUUID();
         var request = new CreateActionCommand(
                 "calendar.create_event", "google-calendar", Map.of("title", "Demo"), "request-123");
         when(actionRepository.findByRequestKey(tenantId, request.requestKey())).thenReturn(Optional.empty());
+        when(payloadHash.make(request.payload())).thenReturn("a".repeat(64));
+        when(actionRepository.saveIfMissing(any(Action.class))).thenReturn(true);
+
+        var result = service.create(tenantId, UUID.randomUUID(), request);
+
+        assertThat(result.getConnector()).isEqualTo("google-calendar");
+        verify(actionRepository).saveIfMissing(result);
+    }
+
+    @Test
+    void create_whenConnectorIsUnknown_shouldRejectRequest() {
+        var tenantId = UUID.randomUUID();
+        var request =
+                new CreateActionCommand("calendar.create_event", "unknown", Map.of("title", "Demo"), "request-123");
+        when(actionRepository.findByRequestKey(tenantId, request.requestKey())).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.create(tenantId, UUID.randomUUID(), request))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("Only fake-calendar is supported");
+                .hasMessage("Unsupported connector: unknown");
 
         verify(actionRepository, never()).saveIfMissing(any(Action.class));
         verifyNoInteractions(outboxRepository, payloadHash);
