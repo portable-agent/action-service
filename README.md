@@ -67,6 +67,13 @@ pwsh ./scripts/update-contract.ps1 -Version 3.0.0
 `start`, `succeed` и `fail` также идемпотентны: повтор не меняет версию и время действия. Другой
 `eventId` после успеха отклоняется как конфликт.
 
+Temporal UI показывает вид действия, connector, безопасный payload, вход и результат activity. Для
+поиска используются `ActionKind`, `ActionConnector`, `ActionTenantId`, `ActionActorId`, `ActionStatus`.
+`ActionStatus` меняется вместе с выполнением, а ошибка действия завершает workflow как `FAILED`.
+OAuth-токены, client secret и другие данные подключения в workflow не передаются.
+Новые действия запускаются через контракт `ActionWorkflowV2`. Старый `ActionWorkflow` оставлен только
+для корректного воспроизведения уже начатых историй Temporal и не используется для новых запусков.
+
 Action API и outbound-вызов MCP Gateway соответствуют bundle `portable-agent/contracts` версии `3.0.0`.
 При выполнении `context.actorId` берётся из сохранённого Action и передаётся отдельно от аргументов
 MCP tool. Модель и пользовательский payload не могут подменить владельца подключения.

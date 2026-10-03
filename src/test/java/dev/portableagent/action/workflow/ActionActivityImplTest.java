@@ -1,5 +1,6 @@
 package dev.portableagent.action.workflow;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -9,6 +10,7 @@ import static org.mockito.Mockito.when;
 import dev.portableagent.action.client.McpCallFailed;
 import dev.portableagent.action.model.Action;
 import dev.portableagent.action.model.ActionDecision;
+import dev.portableagent.action.model.ActionStatus;
 import dev.portableagent.action.service.ActionService;
 import java.time.Instant;
 import java.util.Map;
@@ -37,34 +39,53 @@ class ActionActivityImplTest {
     @Test
     void run_whenMcpCallSucceeds_shouldSaveEventId() {
         var action = approvedAction();
-        when(actionService.start(action.getId(), action.getPayloadHash())).thenReturn(action);
+        var input = runInput(action);
+        when(actionService.start(action.getId(), action.getPayloadHash())).thenAnswer(ignored -> {
+            action.startExecution(Instant.parse("2026-09-11T06:02:00Z"));
+            return action;
+        });
         when(actionCalls.run(action)).thenReturn("event-123");
+        when(actionService.succeed(action.getId(), "event-123")).thenAnswer(ignored -> {
+            action.succeed("event-123", Instant.parse("2026-09-11T06:03:00Z"));
+            return action;
+        });
 
-        activity.run(action.getId(), action.getPayloadHash());
+        var result = activity.run(input);
 
         verify(actionCalls).run(action);
         verify(actionService).succeed(action.getId(), "event-123");
+        assertThat(result.status()).isEqualTo(ActionStatus.SUCCEEDED);
+        assertThat(result.output()).containsEntry("eventId", "event-123");
     }
 
     @Test
     void run_whenMcpCallFails_shouldLetTemporalRetry() {
         var action = approvedAction();
-        when(actionService.start(action.getId(), action.getPayloadHash())).thenReturn(action);
+        var input = runInput(action);
+        when(actionService.start(action.getId(), action.getPayloadHash())).thenAnswer(ignored -> {
+            action.startExecution(Instant.parse("2026-09-11T06:02:00Z"));
+            return action;
+        });
         when(actionCalls.run(action)).thenThrow(new McpCallFailed("Gateway call failed"));
 
-        assertThatThrownBy(() -> activity.run(action.getId(), action.getPayloadHash()))
-                .isInstanceOf(McpCallFailed.class);
+        assertThatThrownBy(() -> activity.run(input)).isInstanceOf(McpCallFailed.class);
 
         verify(actionService, never()).fail(action.getId());
     }
 
     @Test
     void fail_shouldMarkActionFailed() {
-        var actionId = UUID.randomUUID();
+        var action = approvedAction();
+        action.startExecution(Instant.parse("2026-09-11T06:02:00Z"));
+        when(actionService.fail(action.getId())).thenAnswer(ignored -> {
+            action.fail(Instant.parse("2026-09-11T06:03:00Z"));
+            return action;
+        });
 
-        activity.fail(actionId);
+        var result = activity.fail(ActionWorkflowInput.from(action));
 
-        verify(actionService).fail(actionId);
+        verify(actionService).fail(action.getId());
+        assertThat(result.status()).isEqualTo(ActionStatus.FAILED);
     }
 
     @Test
@@ -74,9 +95,10 @@ class ActionActivityImplTest {
         action.succeed("event-123", Instant.parse("2026-09-11T06:03:00Z"));
         when(actionService.start(action.getId(), action.getPayloadHash())).thenReturn(action);
 
-        activity.run(action.getId(), action.getPayloadHash());
+        var result = activity.run(runInput(action));
 
         verifyNoInteractions(actionCalls);
+        assertThat(result.status()).isEqualTo(ActionStatus.SUCCEEDED);
     }
 
     private Action approvedAction() {
@@ -95,5 +117,9 @@ class ActionActivityImplTest {
                 Instant.parse("2026-09-11T06:00:00Z"));
         action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), Instant.parse("2026-09-11T06:01:00Z"));
         return action;
+    }
+
+    private ActionRunInput runInput(Action action) {
+        return new ActionRunInput(ActionWorkflowInput.from(action), action.getPayloadHash());
     }
 }

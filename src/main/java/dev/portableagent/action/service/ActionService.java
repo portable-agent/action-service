@@ -92,7 +92,8 @@ public class ActionService {
         return change(() -> getForWork(actionId), action -> action.fail(clock.instant()));
     }
 
-    private Action getForWork(UUID actionId) {
+    @Transactional(readOnly = true)
+    public Action getForWork(UUID actionId) {
         return actionRepository.findById(actionId).orElseThrow(() -> new ActionNotFound(actionId));
     }
 

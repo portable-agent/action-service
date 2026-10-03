@@ -68,9 +68,22 @@ AWAITING_APPROVAL -> APPROVED -> EXECUTING -> SUCCEEDED
 
 ## Выполнение через Temporal
 
-Outbox запускает workflow с постоянным id `action-{actionId}`. Workflow ждёт сигнал решения. Для
-`CANCEL` он завершается без activity. Для `CONFIRM` он передаёт `actionId` и подтверждённый
-`payloadHash` в activity.
+Outbox запускает workflow с постоянным id `action-{actionId}`. Workflow получает безопасный снимок
+действия: id, tenant, actor, вид, connector, payload и hash. Данные подключения, OAuth-токены и другие
+секреты в историю Temporal не передаются. Workflow ждёт сигнал решения. Для `CANCEL` он завершается без
+activity. Для `CONFIRM` он передаёт снимок и подтверждённый `payloadHash` в activity.
+
+Новые запуски используют версионированные контракты `ActionWorkflowV2` и `ActionActivityV2`. Контракты
+первой версии и их реализации зарегистрированы на worker только для повторного чтения незавершённых
+историй: менять вход уже запущенного workflow нельзя. Новая бизнес-логика добавляется только в
+актуальную версию.
+
+В Temporal UI у workflow есть короткое описание `kind · connector`, подробности, memo и поля поиска
+`ActionKind`, `ActionConnector`, `ActionTenantId`, `ActionActorId`, `ActionStatus`. Последнее поле
+меняется при выполнении и позволяет отдельно искать ожидающие, успешные, отменённые и неуспешные
+действия. Activity получает `ActionRunInput` и возвращает `ActionRunResult`, поэтому в истории видны
+входные данные, итоговый статус и внешний `eventId`. Описание activity показывает выполняемый вид
+действия. Эти поля регистрирует локальный deploy до запуска приложений.
 
 `ActionService` сохраняет смену статуса и событие решения в одной транзакции. Scheduler читает это
 событие и вызывает Temporal `signalWithStart`. Поэтому сбой процесса между PostgreSQL и Temporal не
@@ -80,9 +93,13 @@ Outbox запускает workflow с постоянным id `action-{actionId}
 новые события.
 
 Activity повторно сверяет hash, переводит действие в `EXECUTING`, вызывает только настроенный адрес
-MCP Gateway и сохраняет `eventId`. Temporal делает не больше трёх попыток. Если все они завершились
-ошибкой, отдельная activity переводит действие в `FAILED`. HTTP-ответы и детали ошибок внешнего
+MCP Gateway и сохраняет `eventId`. Успешная activity возвращает результат в workflow, а workflow — в
+своё завершение. Temporal делает не больше трёх попыток. Если все они завершились ошибкой, отдельная
+activity переводит действие в `FAILED` и возвращает этот статус. HTTP-ответы и детали ошибок внешнего
 коннектора не сохраняются и не отдаются пользователю.
+
+После успешного действия workflow завершается как `COMPLETED`. После исчерпания повторов он сначала
+сохраняет `FAILED` в Action Service и Search Attributes, затем завершается как `FAILED` в Temporal.
 
 Gateway и OAuth2 включаются только через `MCP_GATEWAY_ENABLED=true`. Все адреса, client id, secret,
 scopes и tenant приходят из окружения. Для первого среза один worker работает только с одним tenant и
