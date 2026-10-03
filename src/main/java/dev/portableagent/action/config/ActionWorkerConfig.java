@@ -1,6 +1,7 @@
 package dev.portableagent.action.config;
 
 import dev.portableagent.action.workflow.ActionActivityImpl;
+import dev.portableagent.action.workflow.ActionWorkflow;
 import dev.portableagent.action.workflow.ActionWorkflowImpl;
 import io.temporal.client.WorkflowClient;
 import io.temporal.worker.WorkerFactory;
@@ -13,7 +14,7 @@ public class ActionWorkerConfig {
     @Bean(initMethod = "start", destroyMethod = "shutdown")
     @ConditionalOnProperty(name = "mcp.gateway.enabled", havingValue = "true")
     WorkerFactory actionWorkerFactory(
-            WorkflowClient workflowClient, TemporalProperties properties, ActionActivityImpl activity) {
+            WorkflowClient workflowClient, TemporalProperties properties, ActionWorkflow activity) {
         var factory = WorkerFactory.newInstance(workflowClient);
         var worker = factory.newWorker(properties.taskQueue());
         worker.registerWorkflowImplementationTypes(ActionWorkflowImpl.class);
