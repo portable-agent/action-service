@@ -32,8 +32,8 @@ public class TemporalSender {
                 .signalWithStart("decision", new Object[] {decision, payloadHash}, new Object[] {input});
     }
 
-    private ActionWorkflowV2 newWorkflow(ActionWorkflowInput input) {
-        return workflowClient.newWorkflowStub(ActionWorkflowV2.class, workflowOptions.make(input));
+    private ActionWorkflow newWorkflow(ActionWorkflowInput input) {
+        return workflowClient.newWorkflowStub(ActionWorkflow.class, workflowOptions.make(input));
     }
 
     private ActionWorkflowInput input(UUID actionId) {

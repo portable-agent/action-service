@@ -11,19 +11,9 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "mcp.gateway.enabled", havingValue = "true")
-public class ActionActivityImpl implements ActionActivity, ActionActivityV2 {
+public class ActionActivityImpl implements ActionActivity {
     private final ActionService actionService;
     private final ActionCalls actionCalls;
-
-    @Override
-    public void run(UUID actionId, String payloadHash) {
-        runAction(actionId, payloadHash);
-    }
-
-    @Override
-    public void fail(UUID actionId) {
-        actionService.fail(actionId);
-    }
 
     @Override
     public ActionRunResult run(ActionRunInput input) {

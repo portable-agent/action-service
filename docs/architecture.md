@@ -73,10 +73,10 @@ Outbox запускает workflow с постоянным id `action-{actionId}
 секреты в историю Temporal не передаются. Workflow ждёт сигнал решения. Для `CANCEL` он завершается без
 activity. Для `CONFIRM` он передаёт снимок и подтверждённый `payloadHash` в activity.
 
-Новые запуски используют версионированные контракты `ActionWorkflowV2` и `ActionActivityV2`. Контракты
-первой версии и их реализации зарегистрированы на worker только для повторного чтения незавершённых
-историй: менять вход уже запущенного workflow нельзя. Новая бизнес-логика добавляется только в
-актуальную версию.
+Worker регистрирует только актуальные контракты `ActionWorkflow` и `ActionActivity`. Старый контракт с
+одним `actionId` удалён вместе с реализацией и тестами: до production мы меняем весь локальный контур
+целиком, а не держим временный слой совместимости. Старый локальный Temporal volume нужно один раз
+сбросить через `task reset` в deploy, потому что вход уже записанного workflow изменить нельзя.
 
 В Temporal UI у workflow есть короткое описание `kind · connector`, подробности, memo и поля поиска
 `ActionKind`, `ActionConnector`, `ActionTenantId`, `ActionActorId`, `ActionStatus`. Последнее поле

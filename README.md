@@ -71,8 +71,10 @@ Temporal UI показывает вид действия, connector, безоп�
 поиска используются `ActionKind`, `ActionConnector`, `ActionTenantId`, `ActionActorId`, `ActionStatus`.
 `ActionStatus` меняется вместе с выполнением, а ошибка действия завершает workflow как `FAILED`.
 OAuth-токены, client secret и другие данные подключения в workflow не передаются.
-Новые действия запускаются через контракт `ActionWorkflowV2`. Старый `ActionWorkflow` оставлен только
-для корректного воспроизведения уже начатых историй Temporal и не используется для новых запусков.
+Все действия запускаются через единые контракты `ActionWorkflow` и `ActionActivity`. Старый контракт с
+одним `actionId` удалён: проект пока не имеет production-историй, поэтому временный слой совместимости
+не поддерживается. Если локальный Temporal volume содержит workflow от старого каркаса, перед первым
+запуском этой версии выполни `task reset` в репозитории deploy и подними окружение заново.
 
 Action API и outbound-вызов MCP Gateway соответствуют bundle `portable-agent/contracts` версии `3.0.0`.
 При выполнении `context.actorId` берётся из сохранённого Action и передаётся отдельно от аргументов

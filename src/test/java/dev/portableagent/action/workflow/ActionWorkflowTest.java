@@ -32,7 +32,7 @@ import org.mockito.Mockito;
 class ActionWorkflowTest {
     private TestWorkflowEnvironment testEnvironment;
     private ActionActivityImpl activity;
-    private ActionWorkflowV2 workflow;
+    private ActionWorkflow workflow;
     private TemporalSender sender;
     private ActionService actionService;
 
@@ -43,14 +43,14 @@ class ActionWorkflowTest {
         var worker = testEnvironment.newWorker("action-test");
         activity = Mockito.mock(ActionActivityImpl.class);
         actionService = Mockito.mock(ActionService.class);
-        worker.registerWorkflowImplementationTypes(ActionWorkflowV2Impl.class);
+        worker.registerWorkflowImplementationTypes(ActionWorkflowImpl.class);
         worker.registerActivitiesImplementations(activity);
         testEnvironment.start();
 
         workflow = testEnvironment
                 .getWorkflowClient()
                 .newWorkflowStub(
-                        ActionWorkflowV2.class,
+                        ActionWorkflow.class,
                         WorkflowOptions.newBuilder().setTaskQueue("action-test").build());
         var properties = new TemporalProperties("unused", "default", "action-test");
         sender = new TemporalSender(
@@ -73,7 +73,7 @@ class ActionWorkflowTest {
         Mockito.when(actionService.getForWork(actionId)).thenReturn(action);
         Mockito.when(activity.run(new ActionRunInput(input, payloadHash))).thenReturn(expected);
         sender.sendDecision(actionId, "CONFIRM", payloadHash);
-        workflow = testEnvironment.getWorkflowClient().newWorkflowStub(ActionWorkflowV2.class, "action-" + actionId);
+        workflow = testEnvironment.getWorkflowClient().newWorkflowStub(ActionWorkflow.class, "action-" + actionId);
         var result = WorkflowStub.fromTyped(workflow).getResult(ActionRunResult.class);
 
         verify(activity, timeout(2_000)).run(new ActionRunInput(input, payloadHash));
@@ -93,7 +93,7 @@ class ActionWorkflowTest {
         var input = ActionWorkflowInput.from(action);
         Mockito.when(actionService.getForWork(actionId)).thenReturn(action);
         sender.sendDecision(actionId, "CANCEL", payloadHash);
-        workflow = testEnvironment.getWorkflowClient().newWorkflowStub(ActionWorkflowV2.class, "action-" + actionId);
+        workflow = testEnvironment.getWorkflowClient().newWorkflowStub(ActionWorkflow.class, "action-" + actionId);
         var result = WorkflowStub.fromTyped(workflow).getResult(ActionRunResult.class);
 
         verify(activity, never()).run(new ActionRunInput(input, payloadHash));
@@ -117,7 +117,7 @@ class ActionWorkflowTest {
         Mockito.when(activity.fail(input)).thenReturn(failed);
 
         sender.sendDecision(actionId, "CONFIRM", payloadHash);
-        workflow = testEnvironment.getWorkflowClient().newWorkflowStub(ActionWorkflowV2.class, "action-" + actionId);
+        workflow = testEnvironment.getWorkflowClient().newWorkflowStub(ActionWorkflow.class, "action-" + actionId);
         var workflowStub = WorkflowStub.fromTyped(workflow);
 
         assertThatThrownBy(() -> workflowStub.getResult(ActionRunResult.class))
@@ -145,7 +145,7 @@ class ActionWorkflowTest {
                         ActionStatus.SUCCEEDED,
                         Map.of("eventId", "event-123")));
         sender.sendDecision(actionId, "CONFIRM", payloadHash);
-        workflow = testEnvironment.getWorkflowClient().newWorkflowStub(ActionWorkflowV2.class, "action-" + actionId);
+        workflow = testEnvironment.getWorkflowClient().newWorkflowStub(ActionWorkflow.class, "action-" + actionId);
         WorkflowStub.fromTyped(workflow).getResult(ActionRunResult.class);
 
         assertThatCode(() -> sender.sendDecision(actionId, "CONFIRM", payloadHash))

@@ -10,8 +10,8 @@ import dev.portableagent.action.model.ActionStatus;
 import dev.portableagent.action.workflow.ActionActivityImpl;
 import dev.portableagent.action.workflow.ActionRunInput;
 import dev.portableagent.action.workflow.ActionRunResult;
+import dev.portableagent.action.workflow.ActionWorkflow;
 import dev.portableagent.action.workflow.ActionWorkflowInput;
-import dev.portableagent.action.workflow.ActionWorkflowV2;
 import io.temporal.api.enums.v1.IndexedValueType;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
@@ -75,7 +75,7 @@ class ActionWorkerConfigTest {
                     var workflow = testEnvironment
                             .getWorkflowClient()
                             .newWorkflowStub(
-                                    ActionWorkflowV2.class,
+                                    ActionWorkflow.class,
                                     WorkflowOptions.newBuilder()
                                             .setWorkflowId("action-" + input.actionId())
                                             .setTaskQueue(properties.taskQueue())
