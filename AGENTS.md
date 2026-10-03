@@ -19,6 +19,8 @@
   ручными Java-классами.
 - `scheduler` отправляет outbox.
 - `workflow` содержит связь с Temporal.
+- Проверка и выполнение вида действия добавляются отдельными стратегиями `ActionRule` и `ActionCall`;
+  не добавляй цепочки `if` по `kind` в service или workflow.
 - `client` содержит только вызов MCP Gateway и получение service token по OAuth2 client credentials.
 - Один worker обслуживает только `MCP_GATEWAY_TENANT_ID`; не убирай эту fail-closed проверку без
   спроектированного multi-tenant token exchange.

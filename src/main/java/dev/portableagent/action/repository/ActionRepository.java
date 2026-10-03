@@ -11,6 +11,7 @@ import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import org.jooq.DSLContext;
 import org.jooq.JSON;
 import org.jooq.Record;
@@ -20,14 +21,10 @@ import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
 
 @Repository
+@RequiredArgsConstructor
 public class ActionRepository {
     private final DSLContext db;
     private final JsonMapper jsonMapper;
-
-    public ActionRepository(DSLContext db, JsonMapper jsonMapper) {
-        this.db = db;
-        this.jsonMapper = jsonMapper;
-    }
 
     public Optional<Action> findByRequestKey(UUID tenantId, String requestKey) {
         return db.selectFrom(ACTION_PROPOSALS)

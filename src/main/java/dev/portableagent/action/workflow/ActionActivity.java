@@ -1,11 +1,10 @@
 package dev.portableagent.action.workflow;
 
 import io.temporal.activity.ActivityInterface;
-import java.util.UUID;
 
-@ActivityInterface
+@ActivityInterface(namePrefix = "Action")
 public interface ActionActivity {
-    void run(UUID actionId, String payloadHash);
+    ActionRunResult run(ActionRunInput input);
 
-    void fail(UUID actionId);
+    ActionRunResult fail(ActionWorkflowInput input);
 }

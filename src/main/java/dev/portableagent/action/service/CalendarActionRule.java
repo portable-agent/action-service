@@ -1,23 +1,21 @@
 package dev.portableagent.action.service;
 
+import dev.portableagent.action.model.ActionKind;
 import java.util.Map;
 import java.util.Set;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class CalendarActionRule implements ActionRule {
-    private static final String KIND = "calendar.create_event";
     private static final Set<String> CONNECTORS = Set.of("fake-calendar", "google-calendar");
 
     private final CalendarInputCheck inputCheck;
 
-    public CalendarActionRule(CalendarInputCheck inputCheck) {
-        this.inputCheck = inputCheck;
-    }
-
     @Override
-    public String kind() {
-        return KIND;
+    public ActionKind kind() {
+        return ActionKind.CALENDAR_CREATE_EVENT;
     }
 
     @Override

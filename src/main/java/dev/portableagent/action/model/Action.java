@@ -7,7 +7,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import lombok.Getter;
 
+@Getter
 public class Action {
     private final UUID id;
     private long version;
@@ -220,57 +222,5 @@ public class Action {
             return list.stream().map(Action::copyValue).toList();
         }
         return value;
-    }
-
-    public UUID getId() {
-        return id;
-    }
-
-    public long getVersion() {
-        return version;
-    }
-
-    public UUID getTenantId() {
-        return tenantId;
-    }
-
-    public UUID getActorId() {
-        return actorId;
-    }
-
-    public String getRequestKey() {
-        return requestKey;
-    }
-
-    public String getKind() {
-        return kind;
-    }
-
-    public String getConnector() {
-        return connector;
-    }
-
-    public Map<String, Object> getPayload() {
-        return payload;
-    }
-
-    public String getPayloadHash() {
-        return payloadHash;
-    }
-
-    public ActionStatus getStatus() {
-        return status;
-    }
-
-    public ActionResult getResult() {
-        return result;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
     }
 }

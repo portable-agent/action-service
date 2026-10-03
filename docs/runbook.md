@@ -16,6 +16,10 @@
 5. Проверь, что connect/read timeouts меньше 30-секундного timeout activity.
 6. Не выводи access token или client secret в журнал и issue.
 7. Найди workflow `action-{actionId}` в Temporal UI и сравни статус action в PostgreSQL.
+8. В UI проверь `Summary`, `Memo`, вход и выход `ActionRun`. Для успешного календарного
+   действия выход содержит `status=SUCCEEDED` и `output.eventId`.
+9. Если запуск отклонён из-за неизвестного Search Attribute, проверь выполнение temporal-init и наличие
+   `ActionKind`, `ActionConnector`, `ActionTenantId`, `ActionActorId`, `ActionStatus`.
 
 ## Outbox не уходит
 

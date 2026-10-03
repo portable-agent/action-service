@@ -8,18 +8,16 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.jooq.DSLContext;
 import org.springframework.stereotype.Repository;
 
 @Repository
+@RequiredArgsConstructor
 public class OutboxRepository {
     private static final int MAX_ERROR_LENGTH = 1000;
 
     private final DSLContext db;
-
-    public OutboxRepository(DSLContext db) {
-        this.db = db;
-    }
 
     public void save(OutboxItem item) {
         db.insertInto(ACTION_DISPATCH_OUTBOX)

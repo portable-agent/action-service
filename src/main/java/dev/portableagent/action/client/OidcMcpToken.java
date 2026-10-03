@@ -4,11 +4,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
+@RequiredArgsConstructor
 public class OidcMcpToken implements McpToken {
     private static final long REFRESH_BEFORE_SECONDS = 30;
 
@@ -21,16 +23,6 @@ public class OidcMcpToken implements McpToken {
 
     private String value;
     private Instant expiresAt = Instant.EPOCH;
-
-    public OidcMcpToken(
-            RestClient restClient, String clientId, String clientSecret, String scope, UUID tenantId, Clock clock) {
-        this.restClient = restClient;
-        this.clientId = clientId;
-        this.clientSecret = clientSecret;
-        this.scope = scope;
-        this.tenantId = tenantId;
-        this.clock = clock;
-    }
 
     @Override
     public synchronized String get(UUID requestedTenantId) {

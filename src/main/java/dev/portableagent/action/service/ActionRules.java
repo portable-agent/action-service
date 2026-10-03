@@ -1,21 +1,17 @@
 package dev.portableagent.action.service;
 
-import java.util.List;
+import dev.portableagent.action.model.ActionKind;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class ActionRules {
-    private final Map<String, ActionRule> byKind;
-
-    public ActionRules(List<ActionRule> rules) {
-        this.byKind = rules.stream().collect(Collectors.toUnmodifiableMap(ActionRule::kind, Function.identity()));
-    }
+    private final Map<ActionKind, ActionRule> byKind;
 
     public void check(CreateActionCommand request) {
-        var rule = byKind.get(request.kind());
+        var rule = byKind.get(ActionKind.from(request.kind()));
         if (rule == null) {
             throw new IllegalArgumentException("Unsupported action kind: " + request.kind());
         }

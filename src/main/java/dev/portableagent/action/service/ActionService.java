@@ -11,10 +11,12 @@ import java.time.Clock;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class ActionService {
     private static final int CHANGE_TRIES = 3;
 
@@ -23,19 +25,6 @@ public class ActionService {
     private final PayloadHash payloadHash;
     private final ActionRules actionRules;
     private final Clock clock;
-
-    public ActionService(
-            ActionRepository actionRepository,
-            OutboxRepository outboxRepository,
-            PayloadHash payloadHash,
-            ActionRules actionRules,
-            Clock clock) {
-        this.actionRepository = actionRepository;
-        this.outboxRepository = outboxRepository;
-        this.payloadHash = payloadHash;
-        this.actionRules = actionRules;
-        this.clock = clock;
-    }
 
     @Transactional
     public Action create(UUID tenantId, UUID userId, CreateActionCommand request) {
@@ -103,7 +92,8 @@ public class ActionService {
         return change(() -> getForWork(actionId), action -> action.fail(clock.instant()));
     }
 
-    private Action getForWork(UUID actionId) {
+    @Transactional(readOnly = true)
+    public Action getForWork(UUID actionId) {
         return actionRepository.findById(actionId).orElseThrow(() -> new ActionNotFound(actionId));
     }
 

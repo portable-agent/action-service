@@ -1,9 +1,10 @@
 package dev.portableagent.action.service;
 
+import dev.portableagent.action.model.ActionKind;
 import java.util.Map;
 
 public interface ActionRule {
-    String kind();
+    ActionKind kind();
 
     void check(String connector, Map<String, Object> payload);
 }

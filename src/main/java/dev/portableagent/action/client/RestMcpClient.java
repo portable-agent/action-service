@@ -2,17 +2,14 @@ package dev.portableagent.action.client;
 
 import dev.portableagent.action.mcp.api.model.McpCallRequest;
 import dev.portableagent.action.mcp.api.model.McpCallResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
+@RequiredArgsConstructor
 public class RestMcpClient implements McpClient {
     private final RestClient restClient;
     private final McpToken token;
-
-    public RestMcpClient(RestClient restClient, McpToken token) {
-        this.restClient = restClient;
-        this.token = token;
-    }
 
     @Override
     public McpResult call(java.util.UUID tenantId, McpCallRequest request) {
