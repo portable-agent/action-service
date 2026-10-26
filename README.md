@@ -4,6 +4,7 @@
 действие, сохраняет payload вместе с записью outbox и передаёт идентификатор в Temporal. Worker ждёт
 решение пользователя и после `CONFIRM` вызывает MCP Gateway. Сейчас разрешено действие
 `calendar.create_event` через `fake-calendar` или `google-calendar`.
+`requestKey` защищает от повторного создания в пределах одного пользователя и tenant.
 
 ## Стек
 

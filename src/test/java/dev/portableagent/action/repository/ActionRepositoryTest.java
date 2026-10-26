@@ -134,7 +134,15 @@ class ActionRepositoryTest {
     void saveIfMissing_whenRequestsRunTogether_shouldInsertOnce() throws Exception {
         var tenantId = UUID.randomUUID();
         var first = action(tenantId, "same-request");
-        var second = action(tenantId, "same-request");
+        var second = Action.create(
+                tenantId,
+                first.getActorId(),
+                "same-request",
+                first.getKind(),
+                first.getConnector(),
+                first.getPayload(),
+                first.getPayloadHash(),
+                first.getCreatedAt());
         var start = new CountDownLatch(1);
 
         try (var pool = Executors.newFixedThreadPool(2)) {
@@ -145,7 +153,29 @@ class ActionRepositoryTest {
             assertThat(List.of(firstSave.get(), secondSave.get())).containsExactlyInAnyOrder(true, false);
         }
 
-        assertThat(repository(db).findByRequestKey(tenantId, "same-request")).isPresent();
+        assertThat(repository(db).findByRequestKey(tenantId, first.getActorId(), "same-request"))
+                .isPresent();
+    }
+
+    @Test
+    void saveIfMissing_whenUsersShareRequestKey_shouldSaveBoth() {
+        var repository = repository(db);
+        var tenantId = UUID.randomUUID();
+        var first = action(tenantId, "shared-request");
+        var second = action(tenantId, "shared-request");
+
+        assertThat(repository.saveIfMissing(first)).isTrue();
+        assertThat(repository.saveIfMissing(second)).isTrue();
+        assertThat(repository
+                        .findByRequestKey(tenantId, first.getActorId(), "shared-request")
+                        .orElseThrow()
+                        .getId())
+                .isEqualTo(first.getId());
+        assertThat(repository
+                        .findByRequestKey(tenantId, second.getActorId(), "shared-request")
+                        .orElseThrow()
+                        .getId())
+                .isEqualTo(second.getId());
     }
 
     @Test

@@ -28,7 +28,7 @@ public class ActionService {
 
     @Transactional
     public Action create(UUID tenantId, UUID userId, CreateActionCommand request) {
-        var oldAction = actionRepository.findByRequestKey(tenantId, request.requestKey());
+        var oldAction = actionRepository.findByRequestKey(tenantId, userId, request.requestKey());
         if (oldAction.isPresent()) {
             return oldAction.get();
         }
@@ -47,7 +47,7 @@ public class ActionService {
                 now);
         if (!actionRepository.saveIfMissing(action)) {
             return actionRepository
-                    .findByRequestKey(tenantId, request.requestKey())
+                    .findByRequestKey(tenantId, userId, request.requestKey())
                     .orElseThrow(() -> new IllegalStateException("Saved action was not found"));
         }
         outboxRepository.save(OutboxItem.start(action.getId(), now));
