@@ -61,7 +61,8 @@ class ActionServiceTest {
         var userId = UUID.randomUUID();
         var request = new CreateActionCommand(
                 "calendar.create_event", "fake-calendar", Map.of("title", "Demo"), "request-123");
-        when(actionRepository.findByRequestKey(tenantId, request.requestKey())).thenReturn(Optional.empty());
+        when(actionRepository.findByRequestKey(tenantId, userId, request.requestKey()))
+                .thenReturn(Optional.empty());
         when(payloadHash.make(request.payload())).thenReturn("a".repeat(64));
         when(actionRepository.saveIfMissing(any(Action.class))).thenReturn(true);
 
@@ -89,12 +90,12 @@ class ActionServiceTest {
                 clock.instant());
         var request = new CreateActionCommand(
                 "calendar.create_event", "fake-calendar", Map.of("title", "Demo"), "request-123");
-        when(actionRepository.findByRequestKey(tenantId, request.requestKey()))
+        when(actionRepository.findByRequestKey(tenantId, oldAction.getActorId(), request.requestKey()))
                 .thenReturn(Optional.empty(), Optional.of(oldAction));
         when(payloadHash.make(request.payload())).thenReturn("a".repeat(64));
         when(actionRepository.saveIfMissing(any(Action.class))).thenReturn(false);
 
-        assertThat(service.create(tenantId, UUID.randomUUID(), request)).isSameAs(oldAction);
+        assertThat(service.create(tenantId, oldAction.getActorId(), request)).isSameAs(oldAction);
         verifyNoInteractions(outboxRepository);
     }
 
@@ -111,19 +112,22 @@ class ActionServiceTest {
                 "a".repeat(64),
                 clock.instant());
         var request = new CreateActionCommand("ignored", "ignored", Map.of("x", "y"), "request-123");
-        when(actionRepository.findByRequestKey(tenantId, request.requestKey())).thenReturn(Optional.of(oldAction));
+        when(actionRepository.findByRequestKey(tenantId, oldAction.getActorId(), request.requestKey()))
+                .thenReturn(Optional.of(oldAction));
 
-        assertThat(service.create(tenantId, UUID.randomUUID(), request)).isSameAs(oldAction);
+        assertThat(service.create(tenantId, oldAction.getActorId(), request)).isSameAs(oldAction);
         verify(outboxRepository, never()).save(any(OutboxItem.class));
     }
 
     @Test
     void create_whenKindIsNotCalendar_shouldRejectRequest() {
         var tenantId = UUID.randomUUID();
+        var userId = UUID.randomUUID();
         var request = new CreateActionCommand("task.create", "fake-calendar", Map.of("title", "Demo"), "request-123");
-        when(actionRepository.findByRequestKey(tenantId, request.requestKey())).thenReturn(Optional.empty());
+        when(actionRepository.findByRequestKey(tenantId, userId, request.requestKey()))
+                .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.create(tenantId, UUID.randomUUID(), request))
+        assertThatThrownBy(() -> service.create(tenantId, userId, request))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Unsupported action kind: task.create");
 
@@ -134,13 +138,15 @@ class ActionServiceTest {
     @Test
     void create_whenConnectorIsGoogleCalendar_shouldSaveAction() {
         var tenantId = UUID.randomUUID();
+        var userId = UUID.randomUUID();
         var request = new CreateActionCommand(
                 "calendar.create_event", "google-calendar", Map.of("title", "Demo"), "request-123");
-        when(actionRepository.findByRequestKey(tenantId, request.requestKey())).thenReturn(Optional.empty());
+        when(actionRepository.findByRequestKey(tenantId, userId, request.requestKey()))
+                .thenReturn(Optional.empty());
         when(payloadHash.make(request.payload())).thenReturn("a".repeat(64));
         when(actionRepository.saveIfMissing(any(Action.class))).thenReturn(true);
 
-        var result = service.create(tenantId, UUID.randomUUID(), request);
+        var result = service.create(tenantId, userId, request);
 
         assertThat(result.getConnector()).isEqualTo("google-calendar");
         verify(actionRepository).saveIfMissing(result);
@@ -149,11 +155,13 @@ class ActionServiceTest {
     @Test
     void create_whenConnectorIsUnknown_shouldRejectRequest() {
         var tenantId = UUID.randomUUID();
+        var userId = UUID.randomUUID();
         var request =
                 new CreateActionCommand("calendar.create_event", "unknown", Map.of("title", "Demo"), "request-123");
-        when(actionRepository.findByRequestKey(tenantId, request.requestKey())).thenReturn(Optional.empty());
+        when(actionRepository.findByRequestKey(tenantId, userId, request.requestKey()))
+                .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.create(tenantId, UUID.randomUUID(), request))
+        assertThatThrownBy(() -> service.create(tenantId, userId, request))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Unsupported connector: unknown");
 

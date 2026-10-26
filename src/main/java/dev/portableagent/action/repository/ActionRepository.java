@@ -26,9 +26,10 @@ public class ActionRepository {
     private final DSLContext db;
     private final JsonMapper jsonMapper;
 
-    public Optional<Action> findByRequestKey(UUID tenantId, String requestKey) {
+    public Optional<Action> findByRequestKey(UUID tenantId, UUID userId, String requestKey) {
         return db.selectFrom(ACTION_PROPOSALS)
                 .where(ACTION_PROPOSALS.TENANT_ID.eq(tenantId))
+                .and(ACTION_PROPOSALS.ACTOR_ID.eq(userId))
                 .and(ACTION_PROPOSALS.IDEMPOTENCY_KEY.eq(requestKey))
                 .fetchOptional(this::toAction);
     }
@@ -60,7 +61,7 @@ public class ActionRepository {
                 .set(ACTION_PROPOSALS.STATUS, action.getStatus().name())
                 .set(ACTION_PROPOSALS.CREATED_AT, utc(action.getCreatedAt()))
                 .set(ACTION_PROPOSALS.UPDATED_AT, utc(action.getUpdatedAt()))
-                .onConflict(ACTION_PROPOSALS.TENANT_ID, ACTION_PROPOSALS.IDEMPOTENCY_KEY)
+                .onConflict(ACTION_PROPOSALS.TENANT_ID, ACTION_PROPOSALS.ACTOR_ID, ACTION_PROPOSALS.IDEMPOTENCY_KEY)
                 .doNothing()
                 .execute();
         return changed == 1;
