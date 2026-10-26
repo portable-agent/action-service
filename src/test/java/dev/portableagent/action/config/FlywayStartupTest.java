@@ -82,7 +82,7 @@ class FlywayStartupTest {
                 .when(outboxRepository)
                 .save(argThat(item -> item.type() == OutboxType.DECISION));
 
-        assertThatThrownBy(() -> actionService.decide(tenantId, action.getId(), command))
+        assertThatThrownBy(() -> actionService.decide(tenantId, action.getActorId(), action.getId(), command))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("Outbox is not available");
         assertThat(actionRepository
@@ -92,7 +92,7 @@ class FlywayStartupTest {
                 .isEqualTo(ActionStatus.AWAITING_APPROVAL);
 
         doCallRealMethod().when(outboxRepository).save(any(OutboxItem.class));
-        actionService.decide(tenantId, action.getId(), command);
+        actionService.decide(tenantId, action.getActorId(), action.getId(), command);
 
         assertThat(actionRepository
                         .findById(tenantId, action.getId())
