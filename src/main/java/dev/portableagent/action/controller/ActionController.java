@@ -28,13 +28,15 @@ public class ActionController implements ActionsApi {
 
     @Override
     public ResponseEntity<ActionResponse> getAction(UUID actionId) {
-        var action = actionService.get(tenantId(jwt()), actionId);
+        var jwt = jwt();
+        var action = actionService.get(tenantId(jwt), userId(jwt), actionId);
         return ResponseEntity.ok(ActionMapper.toResponse(action));
     }
 
     @Override
     public ResponseEntity<ActionResponse> decideAction(UUID actionId, ActionDecisionRequest request) {
-        var action = actionService.decide(tenantId(jwt()), actionId, ActionMapper.toCommand(request));
+        var jwt = jwt();
+        var action = actionService.decide(tenantId(jwt), userId(jwt), actionId, ActionMapper.toCommand(request));
         return ResponseEntity.accepted().body(ActionMapper.toResponse(action));
     }
 

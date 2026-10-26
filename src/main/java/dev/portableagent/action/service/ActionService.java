@@ -55,14 +55,18 @@ public class ActionService {
     }
 
     @Transactional(readOnly = true)
-    public Action get(UUID tenantId, UUID actionId) {
-        return actionRepository.findById(tenantId, actionId).orElseThrow(() -> new ActionNotFound(actionId));
+    public Action get(UUID tenantId, UUID userId, UUID actionId) {
+        var action = actionRepository.findById(tenantId, actionId).orElseThrow(() -> new ActionNotFound(actionId));
+        if (!action.getActorId().equals(userId)) {
+            throw new ActionNotFound(actionId);
+        }
+        return action;
     }
 
     @Transactional
-    public Action decide(UUID tenantId, UUID actionId, DecideActionCommand request) {
+    public Action decide(UUID tenantId, UUID userId, UUID actionId, DecideActionCommand request) {
         var action = change(
-                () -> get(tenantId, actionId),
+                () -> get(tenantId, userId, actionId),
                 current -> current.applyDecision(request.decision(), request.payloadHash(), clock.instant()));
         outboxRepository.save(
                 OutboxItem.decision(actionId, request.decision().name(), request.payloadHash(), clock.instant()));

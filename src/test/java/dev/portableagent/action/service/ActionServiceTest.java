@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import dev.portableagent.action.exception.ActionChanged;
+import dev.portableagent.action.exception.ActionNotFound;
 import dev.portableagent.action.model.Action;
 import dev.portableagent.action.model.ActionDecision;
 import dev.portableagent.action.model.ActionKind;
@@ -161,12 +162,37 @@ class ActionServiceTest {
     }
 
     @Test
+    void get_whenAnotherUserOwnsAction_shouldReturnNotFound() {
+        var action = action();
+        when(actionRepository.findById(action.getTenantId(), action.getId())).thenReturn(Optional.of(action));
+
+        assertThatThrownBy(() -> service.get(action.getTenantId(), UUID.randomUUID(), action.getId()))
+                .isInstanceOf(ActionNotFound.class);
+    }
+
+    @Test
+    void decide_whenAnotherUserOwnsAction_shouldReturnNotFound() {
+        var action = action();
+        when(actionRepository.findById(action.getTenantId(), action.getId())).thenReturn(Optional.of(action));
+
+        assertThatThrownBy(() -> service.decide(
+                        action.getTenantId(),
+                        UUID.randomUUID(),
+                        action.getId(),
+                        new DecideActionCommand(ActionDecision.CONFIRM, action.getPayloadHash())))
+                .isInstanceOf(ActionNotFound.class);
+        verify(actionRepository, never()).update(any(Action.class));
+        verifyNoInteractions(outboxRepository);
+    }
+
+    @Test
     void decide_whenConfirmIsNew_shouldSaveApprovedAction() {
         var action = action();
         when(actionRepository.findById(action.getTenantId(), action.getId())).thenReturn(Optional.of(action));
 
         var result = service.decide(
                 action.getTenantId(),
+                action.getActorId(),
                 action.getId(),
                 new DecideActionCommand(ActionDecision.CONFIRM, action.getPayloadHash()));
 
@@ -187,6 +213,7 @@ class ActionServiceTest {
 
         var result = service.decide(
                 action.getTenantId(),
+                action.getActorId(),
                 action.getId(),
                 new DecideActionCommand(ActionDecision.CONFIRM, action.getPayloadHash()));
 
@@ -208,6 +235,7 @@ class ActionServiceTest {
 
         var result = service.decide(
                 first.getTenantId(),
+                first.getActorId(),
                 first.getId(),
                 new DecideActionCommand(ActionDecision.CONFIRM, first.getPayloadHash()));
 

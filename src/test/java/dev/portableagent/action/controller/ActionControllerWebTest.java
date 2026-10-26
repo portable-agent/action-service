@@ -226,7 +226,7 @@ class ActionControllerWebTest {
         action.applyDecision(ActionDecision.CONFIRM, "a".repeat(64), now.plusSeconds(1));
         action.startExecution(now.plusSeconds(2));
         action.succeed("event-123", now.plusSeconds(3));
-        when(actionService.get(tenantId, action.getId())).thenReturn(action);
+        when(actionService.get(tenantId, userId, action.getId())).thenReturn(action);
 
         mockMvc.perform(get("/api/v1/actions/{actionId}", action.getId())
                         .with(jwt().jwt(token ->
@@ -251,7 +251,7 @@ class ActionControllerWebTest {
                 "a".repeat(64),
                 now);
         action.applyDecision(ActionDecision.CONFIRM, action.getPayloadHash(), now.plusSeconds(1));
-        when(actionService.decide(eq(tenantId), eq(action.getId()), any(DecideActionCommand.class)))
+        when(actionService.decide(eq(tenantId), eq(userId), eq(action.getId()), any(DecideActionCommand.class)))
                 .thenReturn(action);
 
         mockMvc.perform(post("/api/v1/actions/{actionId}/decisions", action.getId())
